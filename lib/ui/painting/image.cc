@@ -42,7 +42,7 @@ void CanvasImage::RegisterNatives(tonic::DartLibraryNatives* natives) {
 }
 
 void CanvasImage::FromTexture(Dart_NativeArguments args) {
-    Dart_Handle raw_image_callback = Dart_GetNativeArgument(args, 3);    
+    Dart_Handle raw_image_callback = Dart_GetNativeArgument(args, 3);
     if (!Dart_IsClosure(raw_image_callback)) {
       Dart_SetReturnValue(args, tonic::ToDart("Callback must be a function"));
       return;
@@ -104,7 +104,7 @@ void CanvasImage::FromTexture(Dart_NativeArguments args) {
       [ui_runner = dart_state->GetTaskRunners().GetUITaskRunner(), tonic_dart_state](SkiaGPUObject<SkImage> image) {
         ui_runner->PostTask(fml::MakeCopyable(
             [image = std::move(image), tonic_dart_state]() mutable {
-              
+
               auto _dart_state = tonic_dart_state.get()->dart_state().lock();
 
               if (!_dart_state) {
@@ -119,7 +119,7 @@ void CanvasImage::FromTexture(Dart_NativeArguments args) {
               tonic::DartInvoke(tonic_dart_state->Get(), {tonic::ToDart(canvas_image)});
             }));
       };
-        
+
     GrMtlTextureInfo skiaTextureInfo;
     skiaTextureInfo.fTexture = sk_cfp<const void*>{texture_pointer};
 
@@ -127,14 +127,14 @@ void CanvasImage::FromTexture(Dart_NativeArguments args) {
                                         height=height,
                                         mipMapped=GrMipMapped::kNo,
                                         textureInfo=skiaTextureInfo);
-  
+
     auto raster_runner = dart_state->GetTaskRunners().GetRasterTaskRunner();
 
-    
+
 
     raster_runner->PostTask(fml::MakeCopyable([skiaBackendTexture, result, snapshot_delegate =
            UIDartState::Current()->GetSnapshotDelegate(), unref_queue = dart_state->GetSkiaUnrefQueue()]() mutable {
-      
+
       auto _snapshot_delegate = snapshot_delegate.get();
 
       if (!_snapshot_delegate) {
@@ -143,7 +143,7 @@ void CanvasImage::FromTexture(Dart_NativeArguments args) {
         return;
       }
 
-      
+
       auto image = snapshot_delegate->UploadTexture(skiaBackendTexture);
 
       auto gpu_image = SkiaGPUObject<SkImage>{std::move(image), unref_queue};
@@ -163,9 +163,9 @@ struct TextureDescriptor {
 };
 /*
 void CanvasImage::FromTextures(Dart_NativeArguments args) {
-    
+
     Dart_Handle raw_image_callback = Dart_GetNativeArgument(args, 3);
-    
+
     if (!Dart_IsClosure(raw_image_callback)) {
       Dart_SetReturnValue(args, tonic::ToDart("Callback must be a function"));
       return;
@@ -186,7 +186,7 @@ void CanvasImage::FromTextures(Dart_NativeArguments args) {
     auto* dart_state = UIDartState::Current();
     auto& class_library = dart_state->class_library();
     auto type = Dart_HandleFromPersistent(class_library.GetClass("ui", "_Image"));
-    
+
     auto image_callback = std::make_unique<tonic::DartPersistentValue>(dart_state, raw_image_callback);
     auto unref_queue = dart_state->GetSkiaUnrefQueue();
     auto ui_task_runner = dart_state->GetTaskRunners().GetUITaskRunner();
@@ -211,7 +211,7 @@ void CanvasImage::FromTextures(Dart_NativeArguments args) {
       i++;
     }
 
-   
+
 
     // All done!
     tonic::DartInvoke(image_callback->Get(), {_raw_dart_images});
@@ -242,7 +242,7 @@ void CanvasImage::FromTextures(Dart_NativeArguments args) {
           raster_images.push_back(snapshot_delegate->UploadTexture(skiaBackendTexture));
 
         }
-        
+
 
         fml::TaskRunner::RunNowOrPostTask(
             ui_task_runner,
