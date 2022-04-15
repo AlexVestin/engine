@@ -38,7 +38,7 @@ const tonic::DartWrapperInfo& Image::dart_wrapper_info_ =
 FOR_EACH_BINDING(DART_NATIVE_CALLBACK)
 
 void CanvasImage::RegisterNatives(tonic::DartLibraryNatives* natives) {
-    natives->Register({{"Image_fromTexture", Image::FromTexture, 4, true}, {"Image_fromTextures", Image::FromTextures, 4, true}, FOR_EACH_BINDING(DART_REGISTER_NATIVE)});
+    natives->Register({{"Image_fromTexture", Image::FromTexture, 4, true}, /*{"Image_fromTextures", Image::FromTextures, 4, true},*/ FOR_EACH_BINDING(DART_REGISTER_NATIVE)});
 }
 
 void CanvasImage::FromTexture(Dart_NativeArguments args) {
