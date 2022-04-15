@@ -467,6 +467,8 @@ class Rasterizer final : public SnapshotDelegate {
   // |SnapshotDelegate|
   sk_sp<SkImage> ConvertToRasterImage(sk_sp<SkImage> image) override;
 
+  sk_sp<SkImage> UploadTexture(GrBackendTexture backendTexture) override;
+
   sk_sp<SkData> ScreenshotLayerTreeAsImage(
       flutter::LayerTree* tree,
       flutter::CompositorContext& compositor_context,

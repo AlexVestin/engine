@@ -1617,6 +1617,18 @@ enum PixelFormat {
   bgra8888,
 }
 
+class TextureDescriptor {
+  const TextureDescriptor({
+    required this.pointer,
+    required this.width,
+    required this.height,
+  });
+
+  final int pointer;
+  final int width;
+  final int height;
+}
+
 /// Opaque handle to raw decoded image data (pixels).
 ///
 /// To obtain an [Image] object, use the [ImageDescriptor] API.
@@ -1649,6 +1661,28 @@ class Image {
     }());
     _image._handles.add(this);
   }
+
+  static Future<Image> fromTexture(int texturePointer, int width, int height) async {
+    return _futurize((_Callback<_Image> callback) {
+      _Image.fromTexture(texturePointer, width, height, callback);
+    }).then((value) => Image._(value));
+  }
+
+  /*
+  static Future<List<Image>> fromTextures(List<TextureDescriptor> textureDescriptors) async {
+    final texturePointers = textureDescriptors.map((t) => t.pointer).toList(growable: false);
+    final textureWidths= textureDescriptors.map((t) => t.width).toList(growable: false);
+    final textureHeights = textureDescriptors.map((t) => t.height).toList(growable: false);
+    return _futurize((_Callback<List<_Image>> callback) {
+      _Image.fromTextures(
+        texturePointers,
+        textureWidths,
+        textureHeights,
+        callback,
+        );
+    }).then((value) => value.map((i) => Image._(i)).toList(growable: false));
+  }
+  */
 
   // C++ unit tests access this.
   @pragma('vm:entry-point')
@@ -1843,6 +1877,10 @@ class _Image extends NativeFieldWrapperClass1 {
   // use the ImageDescriptor API.
   @pragma('vm:entry-point')
   _Image._();
+
+  static void fromTexture(int texturePointer, int width, int height, _Callback<_Image> callback) native 'Image_fromTexture';
+
+  //static void fromTextures(List<int> texturePointers, List<int> widths, List<int> heights, _Callback<List<_Image>> callback) native 'Image_fromTextures';
 
   int get width native 'Image_width';
 
