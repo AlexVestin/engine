@@ -28,7 +28,7 @@ class CanvasImage final : public RefCountedDartWrappable<CanvasImage> {
 
   static void FromTexture(Dart_NativeArguments args);
 
-  //static void FromTextures(Dart_NativeArguments args);
+  // static void FromTextures(Dart_NativeArguments args);
 
   int width() { return image_.skia_object()->width(); }
 

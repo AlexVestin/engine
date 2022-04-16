@@ -364,14 +364,8 @@ sk_sp<SkImage> Rasterizer::MakeRasterSnapshot(sk_sp<SkPicture> picture,
 
 sk_sp<SkImage> Rasterizer::UploadTexture(GrBackendTexture backendTexture) {
   return SkImage::MakeFromTexture(
-                            surface_->GetContext(),
-                             backendTexture,
-                             kTopLeft_GrSurfaceOrigin,
-                             kBGRA_8888_SkColorType,
-                             kPremul_SkAlphaType,
-                             nullptr,
-                             nullptr,
-                             nullptr);
+      surface_->GetContext(), backendTexture, kTopLeft_GrSurfaceOrigin,
+      kBGRA_8888_SkColorType, kPremul_SkAlphaType, nullptr, nullptr, nullptr);
 }
 
 sk_sp<SkImage> Rasterizer::ConvertToRasterImage(sk_sp<SkImage> image) {
