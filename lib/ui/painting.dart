@@ -1668,21 +1668,20 @@ class Image {
     }).then((value) => Image._(value));
   }
 
-  /*
-  static Future<List<Image>> fromTextures(List<TextureDescriptor> textureDescriptors) async {
+
+  static Future<List<Image?>> fromTextures(List<TextureDescriptor> textureDescriptors) async {
     final texturePointers = textureDescriptors.map((t) => t.pointer).toList(growable: false);
     final textureWidths= textureDescriptors.map((t) => t.width).toList(growable: false);
     final textureHeights = textureDescriptors.map((t) => t.height).toList(growable: false);
-    return _futurize((_Callback<List<_Image>> callback) {
+    return _futurize((_Callback<List<_Image?>> callback) {
       _Image.fromTextures(
         texturePointers,
         textureWidths,
         textureHeights,
         callback,
         );
-    }).then((value) => value.map((i) => Image._(i)).toList(growable: false));
+    }).then((images) => images.map((image) => image != null ? Image._(image) : null).toList(growable: false));
   }
-  */
 
   // C++ unit tests access this.
   @pragma('vm:entry-point')
@@ -1880,7 +1879,7 @@ class _Image extends NativeFieldWrapperClass1 {
 
   static void fromTexture(int texturePointer, int width, int height, _Callback<_Image> callback) native 'Image_fromTexture';
 
-  //static void fromTextures(List<int> texturePointers, List<int> widths, List<int> heights, _Callback<List<_Image>> callback) native 'Image_fromTextures';
+  static void fromTextures(List<int> texturePointers, List<int> widths, List<int> heights, _Callback<List<_Image?>> callback) native 'Image_fromTextures';
 
   int get width native 'Image_width';
 

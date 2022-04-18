@@ -31,6 +31,10 @@ DartList::DartList(DartList&& other)
   other.is_valid_ = false;
 }
 
+Dart_Handle DartList::Get(size_t index) {
+  return Dart_ListGetAt(dart_handle_, index);
+}
+
 void DartList::Set(size_t index, Dart_Handle value) {
   LogIfError(Dart_ListSetAt(dart_handle_, index, value));
 }
