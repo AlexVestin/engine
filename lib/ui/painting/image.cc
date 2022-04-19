@@ -37,105 +37,13 @@ const tonic::DartWrapperInfo& Image::dart_wrapper_info_ =
 FOR_EACH_BINDING(DART_NATIVE_CALLBACK)
 
 void CanvasImage::RegisterNatives(tonic::DartLibraryNatives* natives) {
-  natives->Register({{"Image_fromTexture", Image::FromTexture, 4, true},
-                     {"Image_fromTextures", Image::FromTextures, 4, true},
+  natives->Register({{"Image_fromTextures", Image::FromTextures, 3, true},
                      FOR_EACH_BINDING(DART_REGISTER_NATIVE)});
 }
 
-void CanvasImage::FromTexture(Dart_NativeArguments args) {
-  Dart_Handle raw_image_callback = Dart_GetNativeArgument(args, 3);
-
-  if (!Dart_IsClosure(raw_image_callback)) {
-    Dart_SetReturnValue(args, tonic::ToDart("Callback must be a function"));
-    return;
-  }
-
-  int64_t texture_address;
-  int64_t width;
-  int64_t height;
-
-  Dart_GetNativeIntegerArgument(args, 0, &texture_address);
-  Dart_GetNativeIntegerArgument(args, 1, &width);
-  Dart_GetNativeIntegerArgument(args, 2, &height);
-
-  const void* texture_pointer = reinterpret_cast<const void*>(texture_address);
-
-  auto* dart_state = UIDartState::Current();
-
-  auto image_callback = std::make_unique<tonic::DartPersistentValue>(
-      dart_state, raw_image_callback);
-
-  auto unref_queue = dart_state->GetSkiaUnrefQueue();
-  auto ui_task_runner = dart_state->GetTaskRunners().GetUITaskRunner();
-  auto raster_task_runner = dart_state->GetTaskRunners().GetRasterTaskRunner();
-  auto snapshot_delegate = dart_state->GetSnapshotDelegate();
-
-  auto ui_task = fml::MakeCopyable([image_callback = std::move(image_callback),
-                                    unref_queue](
-                                       sk_sp<SkImage> raster_image) mutable {
-
-    auto dart_state = image_callback->dart_state().lock();
-
-    if (!dart_state) {
-      // The root isolate could have died in the meantime.
-      return;
-    }
-
-    tonic::DartState::Scope scope(dart_state);
-
-    if (!raster_image) {
-      tonic::DartInvoke(image_callback->Get(), {Dart_Null()});
-      return;
-    }
-
-    auto dart_image = CanvasImage::Create();
-    dart_image->set_image({std::move(raster_image), std::move(unref_queue)});
-    auto* raw_dart_image = tonic::ToDart(std::move(dart_image));
-
-    // All done!
-    tonic::DartInvoke(image_callback->Get(), {raw_dart_image});
-
-    // image_callback is associated with the Dart isolate and must be deleted
-    // on the UI thread.
-    image_callback.reset();
-
-  });
-  // Kick things off on the raster rask runner.
-  fml::TaskRunner::RunNowOrPostTask(
-      raster_task_runner, [ui_task_runner, snapshot_delegate, ui_task,
-                           texture_pointer, width, height] {
-#if __APPLE__
-        GrMtlTextureInfo skiaTextureInfo;
-        skiaTextureInfo.fTexture = sk_cfp<const void*>{texture_pointer};
-#endif
-        GrBackendTexture skiaBackendTexture(width, height, GrMipMapped::kNo,
-                                            skiaTextureInfo);
-        sk_sp<SkImage> raster_image =
-            snapshot_delegate->UploadTexture(skiaBackendTexture);
-        fml::TaskRunner::RunNowOrPostTask(
-            ui_task_runner,
-            [ui_task, raster_image]() { ui_task(raster_image); });
-      });
-}
-
-struct TextureDescriptor {
-  const void* texture_pointer;
-  int width;
-  int height;
-
-  TextureDescriptor(const void* texture_pointer, int width, int height)
-      : texture_pointer{texture_pointer}, width{width}, height{height} {};
-};
-
 void CanvasImage::FromTextures(Dart_NativeArguments args) {
-  Dart_Handle raw_image_callback = Dart_GetNativeArgument(args, 3);
+  Dart_Handle exception = nullptr;
 
-  if (!Dart_IsClosure(raw_image_callback)) {
-    Dart_SetReturnValue(args, tonic::ToDart("Callback must be a function"));
-    return;
-  }
-
-  Dart_Handle exception;
   tonic::DartList raw_texture_addresses =
       tonic::DartConverter<tonic::DartList>::FromArguments(args, 0, exception);
   tonic::DartList raw_widths =
@@ -143,89 +51,53 @@ void CanvasImage::FromTextures(Dart_NativeArguments args) {
   tonic::DartList raw_heights =
       tonic::DartConverter<tonic::DartList>::FromArguments(args, 2, exception);
 
-  std::vector<TextureDescriptor> texture_descriptors;
-
-  for (size_t i = 0; i < raw_texture_addresses.size(); i++) {
-    const auto texture_address =
-        reinterpret_cast<const void*>(raw_texture_addresses.Get<int64_t>(i));
-    const auto width = raw_widths.Get<int64_t>(i);
-    const auto height = raw_heights.Get<int64_t>(i);
-    texture_descriptors.emplace_back(texture_address, width, height);
+  if (exception && Dart_IsApiError(exception)) {
+    Dart_SetReturnValue(args, exception);
+    return;
   }
 
   auto* dart_state = UIDartState::Current();
+
+  if (!dart_state) {
+    Dart_SetReturnValue(
+        args, Dart_ThrowException(tonic::ToDart("Dart State is dead")));
+    return;
+  }
+
   auto& class_library = dart_state->class_library();
   auto type = Dart_TypeToNullableType(Dart_HandleFromPersistent(
       class_library.GetClass(kDartWrapperInfo_ui_Image)));
 
-  auto image_callback = std::make_unique<tonic::DartPersistentValue>(
-      dart_state, raw_image_callback);
   auto unref_queue = dart_state->GetSkiaUnrefQueue();
-  auto ui_task_runner = dart_state->GetTaskRunners().GetUITaskRunner();
-  auto raster_task_runner = dart_state->GetTaskRunners().GetRasterTaskRunner();
-  auto snapshot_delegate = dart_state->GetSnapshotDelegate();
+  auto snapshot_delegate = dart_state->GetSnapshotDelegate().unsafeGet();
 
-  auto ui_task =
-      fml::MakeCopyable([image_callback = std::move(image_callback),
-                         unref_queue, _type = std::move(type), type](
-                            std::vector<sk_sp<SkImage>> raster_images) mutable {
-        auto dart_state = image_callback->dart_state().lock();
+  const auto size = raw_texture_addresses.size();
+  auto _raw_dart_images = Dart_NewListOfType(type, size);
 
-        if (!dart_state) {
-          return;
-        }
-
-        tonic::DartState::Scope scope(dart_state);
-
-        auto _raw_dart_images = Dart_NewListOfType(type, raster_images.size());
-
-        size_t i = 0;
-
-        for (const auto& raster_image : raster_images) {
-          auto dart_image = CanvasImage::Create();
-          dart_image->set_image({std::move(raster_image), unref_queue});
-          auto raw_dart_image = tonic::ToDart(std::move(dart_image));
-          Dart_ListSetAt(_raw_dart_images, i, raw_dart_image);
-          i++;
-        }
-
-        // All done!
-        tonic::DartInvoke(image_callback->Get(), {_raw_dart_images});
-
-        // image_callback is associated with the Dart isolate and must be
-        // deleted on the UI thread.
-        image_callback.reset();
-      });
-
-  // Kick things off on the raster rask runner.
-  fml::TaskRunner::RunNowOrPostTask(
-      raster_task_runner,
-      [ui_task_runner, snapshot_delegate, ui_task,
-       _texture_descriptors = std::move(texture_descriptors)] {
-        std::vector<sk_sp<SkImage>> raster_images;
-
-        for (const auto& texture_descriptor : _texture_descriptors) {
+  for (size_t i = 0; i < size; i++) {
+    const auto texture_address =
+        reinterpret_cast<const void*>(raw_texture_addresses.Get<int64_t>(i));
+    const auto width = raw_widths.Get<int64_t>(i);
+    const auto height = raw_heights.Get<int64_t>(i);
 
 #if __APPLE__
-          GrMtlTextureInfo skiaTextureInfo;
-          skiaTextureInfo.fTexture =
-              sk_cfp<const void*>{texture_descriptor.texture_pointer};
+    GrMtlTextureInfo skiaTextureInfo;
+    skiaTextureInfo.fTexture = sk_cfp<const void*>{texture_address};
 #endif
 
-          GrBackendTexture skiaBackendTexture(
-              texture_descriptor.width, texture_descriptor.height,
-              GrMipMapped::kNo, skiaTextureInfo);
+    GrBackendTexture skiaBackendTexture(width, height, GrMipMapped::kNo,
+                                        skiaTextureInfo);
 
-          raster_images.push_back(
-              snapshot_delegate->UploadTexture(skiaBackendTexture));
-        }
+    auto image = snapshot_delegate->UploadTexture(skiaBackendTexture);
 
-        fml::TaskRunner::RunNowOrPostTask(
-            ui_task_runner,
-            [ui_task, _raster_images = std::move(raster_images)]() {
-              ui_task(_raster_images);
-            });
-      });
+    auto dart_image = CanvasImage::Create();
+    dart_image->set_image({std::move(image), unref_queue});
+
+    auto raw_dart_image = tonic::ToDart(std::move(dart_image));
+    Dart_ListSetAt(_raw_dart_images, i, raw_dart_image);
+  }
+
+  Dart_SetReturnValue(args, _raw_dart_images);
 }
 
 CanvasImage::CanvasImage() = default;

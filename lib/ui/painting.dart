@@ -1662,25 +1662,26 @@ class Image {
     _image._handles.add(this);
   }
 
-  static Future<Image> fromTexture(int texturePointer, int width, int height) async {
-    return _futurize((_Callback<_Image> callback) {
-      _Image.fromTexture(texturePointer, width, height, callback);
-    }).then((value) => Image._(value));
+  static Image fromTexture(int texturePointer, int width, int height) {
+    return fromTextures(<TextureDescriptor>[
+      TextureDescriptor(
+        pointer: texturePointer,
+        width: width,
+        height: height,
+      ),
+    ])[0];
   }
 
 
-  static Future<List<Image?>> fromTextures(List<TextureDescriptor> textureDescriptors) async {
+  static List<Image> fromTextures(List<TextureDescriptor> textureDescriptors) {
     final texturePointers = textureDescriptors.map((t) => t.pointer).toList(growable: false);
     final textureWidths= textureDescriptors.map((t) => t.width).toList(growable: false);
     final textureHeights = textureDescriptors.map((t) => t.height).toList(growable: false);
-    return _futurize((_Callback<List<_Image?>> callback) {
-      _Image.fromTextures(
-        texturePointers,
-        textureWidths,
-        textureHeights,
-        callback,
-        );
-    }).then((images) => images.map((image) => image != null ? Image._(image) : null).toList(growable: false));
+    return _Image.fromTextures(
+      texturePointers,
+      textureWidths,
+      textureHeights,
+    ).map((_image) => Image._(_image!)).toList(growable: false);
   }
 
   // C++ unit tests access this.
@@ -1877,9 +1878,7 @@ class _Image extends NativeFieldWrapperClass1 {
   @pragma('vm:entry-point')
   _Image._();
 
-  static void fromTexture(int texturePointer, int width, int height, _Callback<_Image> callback) native 'Image_fromTexture';
-
-  static void fromTextures(List<int> texturePointers, List<int> widths, List<int> heights, _Callback<List<_Image?>> callback) native 'Image_fromTextures';
+  static List<_Image?> fromTextures(List<int> texturePointers, List<int> widths, List<int> heights) native 'Image_fromTextures';
 
   int get width native 'Image_width';
 

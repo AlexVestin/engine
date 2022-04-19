@@ -17,10 +17,22 @@
 #include "third_party/skia/include/core/SkEncodedImageFormat.h"
 #include "third_party/skia/include/core/SkImageEncoder.h"
 #include "third_party/skia/include/core/SkPictureRecorder.h"
+#include "third_party/skia/include/core/SkPromiseImageTexture.h"
 #include "third_party/skia/include/core/SkSerialProcs.h"
 #include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/core/SkSurfaceCharacterization.h"
 #include "third_party/skia/include/utils/SkBase64.h"
+
+sk_sp<SkPromiseImageTexture> get_promise_texture(
+    SkImage::PromiseImageTextureContext textureContext) {
+  auto backendTexture = reinterpret_cast<GrBackendTexture*>(textureContext);
+  return SkPromiseImageTexture::Make(*backendTexture);
+}
+
+void free_promise_texture(SkImage::PromiseImageTextureContext textureContext) {
+  auto backendTexture = reinterpret_cast<GrBackendTexture*>(textureContext);
+  delete backendTexture;
+}
 
 namespace flutter {
 
@@ -363,9 +375,14 @@ sk_sp<SkImage> Rasterizer::MakeRasterSnapshot(sk_sp<SkPicture> picture,
 }
 
 sk_sp<SkImage> Rasterizer::UploadTexture(GrBackendTexture backendTexture) {
-  return SkImage::MakeFromTexture(
-      surface_->GetContext(), backendTexture, kTopLeft_GrSurfaceOrigin,
-      kBGRA_8888_SkColorType, kPremul_SkAlphaType, nullptr, nullptr, nullptr);
+  auto _backendTexture = new GrBackendTexture(backendTexture);
+
+  return SkImage::MakePromiseTexture(
+      surface_->GetContext()->threadSafeProxy(),
+      backendTexture.getBackendFormat(), backendTexture.dimensions(),
+      GrMipmapped::kNo, kTopLeft_GrSurfaceOrigin, kBGRA_8888_SkColorType,
+      kPremul_SkAlphaType, nullptr, get_promise_texture, free_promise_texture,
+      reinterpret_cast<void*>(_backendTexture));
 }
 
 sk_sp<SkImage> Rasterizer::ConvertToRasterImage(sk_sp<SkImage> image) {
