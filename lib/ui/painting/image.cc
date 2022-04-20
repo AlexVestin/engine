@@ -12,8 +12,9 @@
 #include "third_party/tonic/dart_library_natives.h"
 #include "third_party/tonic/dart_list.h"
 
-#include <iostream>
 #include "flutter/fml/make_copyable.h"
+
+#include <iostream>
 
 namespace flutter {
 
@@ -75,14 +76,20 @@ void CanvasImage::FromTextures(Dart_NativeArguments args) {
   auto _raw_dart_images = Dart_NewListOfType(type, size);
 
   for (size_t i = 0; i < size; i++) {
-    const auto texture_address =
-        reinterpret_cast<const void*>(raw_texture_addresses.Get<int64_t>(i));
+    const auto raw_texture_address = raw_texture_addresses.Get<int64_t>(i);
     const auto width = raw_widths.Get<int64_t>(i);
     const auto height = raw_heights.Get<int64_t>(i);
 
 #if __APPLE__
+    const auto texture_address =
+        reinterpret_cast<const void*>(raw_texture_address);
     GrMtlTextureInfo skiaTextureInfo;
     skiaTextureInfo.fTexture = sk_cfp<const void*>{texture_address};
+#elif ANDROID
+    std::cerr << "Texture ID" << static_cast<GrGLuint>(raw_texture_address)
+              << "\n";
+    GrGLTextureInfo skiaTextureInfo = {
+        0x00008d65, static_cast<GrGLuint>(raw_texture_address), 0x00008058};
 #endif
 
     GrBackendTexture skiaBackendTexture(width, height, GrMipMapped::kNo,
