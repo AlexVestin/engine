@@ -82,6 +82,8 @@ class PlatformViewAndroidJNI {
   ///
   virtual void FlutterViewOnPreEngineRestart() = 0;
 
+  virtual void FlutterViewSetEGLContext(void* eglContext) = 0;
+
   //----------------------------------------------------------------------------
   /// @brief      Attach the SurfaceTexture to the OpenGL ES context that is
   ///             current on the calling thread.

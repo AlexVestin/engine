@@ -49,6 +49,8 @@ static fml::jni::ScopedJavaGlobalRef<jclass>* g_texture_wrapper_class = nullptr;
 
 static fml::jni::ScopedJavaGlobalRef<jclass>* g_java_long_class = nullptr;
 
+static fml::jni::ScopedJavaGlobalRef<jclass>* g_egl_context_class = nullptr;
+
 // Called By Native
 
 static jmethodID g_flutter_callback_info_constructor = nullptr;
@@ -81,6 +83,10 @@ static jmethodID g_update_custom_accessibility_actions_method = nullptr;
 static jmethodID g_on_first_frame_method = nullptr;
 
 static jmethodID g_on_engine_restart_method = nullptr;
+
+static jmethodID g_set_egl_context = nullptr;
+
+static jmethodID g_egl_context_init = nullptr;
 
 static jmethodID g_create_overlay_surface_method = nullptr;
 
@@ -911,6 +917,23 @@ bool RegisterApi(JNIEnv* env) {
     return false;
   }
 
+  g_set_egl_context =
+      env->GetMethodID(g_flutter_jni_class->obj(), "setEGLContext",
+                       "(Landroid/opengl/EGLContext;)V");
+
+  if (g_set_egl_context == nullptr) {
+    FML_LOG(ERROR) << "Could not locate setEGLContext method";
+    return false;
+  }
+
+  g_egl_context_init =
+      env->GetMethodID(g_egl_context_class->obj(), "<init>", "(J)V");
+
+  if (g_egl_context_init == nullptr) {
+    FML_LOG(ERROR) << "Could not locate EGLContext.init(handle) method";
+    return false;
+  }
+
   g_create_overlay_surface_method =
       env->GetMethodID(g_flutter_jni_class->obj(), "createOverlaySurface",
                        "()Lio/flutter/embedding/engine/FlutterOverlaySurface;");
@@ -985,6 +1008,13 @@ bool PlatformViewAndroid::Register(JNIEnv* env) {
           "io/flutter/embedding/engine/mutatorsstack/FlutterMutatorsStack"));
   if (g_mutators_stack_class == nullptr) {
     FML_LOG(ERROR) << "Could not locate FlutterMutatorsStack";
+    return false;
+  }
+
+  g_egl_context_class = new fml::jni::ScopedJavaGlobalRef<jclass>(
+      env, env->FindClass("android/opengl/EGLContext"));
+  if (g_egl_context_class->is_null()) {
+    FML_LOG(ERROR) << "Failed to find EGLContext Class.";
     return false;
   }
 
@@ -1274,6 +1304,27 @@ void PlatformViewAndroidJNIImpl::FlutterViewOnPreEngineRestart() {
   }
 
   env->CallVoidMethod(java_object.obj(), g_on_engine_restart_method);
+
+  FML_CHECK(fml::jni::CheckException(env));
+}
+
+void PlatformViewAndroidJNIImpl::FlutterViewSetEGLContext(void* eglContext) {
+  JNIEnv* env = fml::jni::AttachCurrentThread();
+
+  auto java_object = java_object_.get(env);
+  if (java_object.is_null()) {
+    SK_ABORT("java object is null");
+    return;
+  }
+
+  jobject jegl_context = env->NewObject(g_egl_context_class->obj(),
+                                        g_egl_context_init, (jlong)eglContext);
+
+  if (!jegl_context) {
+    SK_ABORT("java context object is null");
+  }
+
+  env->CallVoidMethod(java_object.obj(), g_set_egl_context, jegl_context);
 
   FML_CHECK(fml::jni::CheckException(env));
 }

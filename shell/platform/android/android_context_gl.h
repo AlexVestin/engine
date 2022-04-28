@@ -126,6 +126,8 @@ class AndroidContextGL : public AndroidContext {
   ///
   EGLContext CreateNewContext() const;
 
+  EGLContext GetResourceContext() const;
+
  private:
   fml::RefPtr<AndroidEnvironmentGL> environment_;
   EGLConfig config_;

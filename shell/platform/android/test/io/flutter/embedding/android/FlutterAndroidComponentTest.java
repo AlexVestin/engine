@@ -18,6 +18,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.opengl.EGLContext;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.Lifecycle;
@@ -380,6 +381,9 @@ public class FlutterAndroidComponentTest {
 
     @Override
     public void onFlutterUiNoLongerDisplayed() {}
+
+    @Override
+    public void setEGLContext(EGLContext context) {}
 
     @Override
     public void detachFromFlutterEngine() {}

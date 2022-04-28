@@ -88,8 +88,10 @@ void CanvasImage::FromTextures(Dart_NativeArguments args) {
 #elif ANDROID
     std::cerr << "Texture ID" << static_cast<GrGLuint>(raw_texture_address)
               << "\n";
+    // 0x0DE1 --> GL_TEXTURE_2D
+    // 0x8058 --> GL_RGBA8_OES
     GrGLTextureInfo skiaTextureInfo = {
-        0x00008d65, static_cast<GrGLuint>(raw_texture_address), 0x00008058};
+        0x0DE1, static_cast<GrGLuint>(raw_texture_address), 0x8058};
 #endif
 
     GrBackendTexture skiaBackendTexture(width, height, GrMipMapped::kNo,

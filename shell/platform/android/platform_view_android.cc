@@ -352,6 +352,16 @@ void PlatformViewAndroid::InstallFirstFrameCallback() {
 
 void PlatformViewAndroid::FireFirstFrameCallback() {
   jni_facade_->FlutterViewOnFirstFrame();
+
+  auto android_context = android_context_.get();
+
+  if (android_context) {
+    auto gl_android_context =
+        reinterpret_cast<AndroidContextGL*>(android_context);
+    auto egl_context =
+        reinterpret_cast<void*>(gl_android_context->GetResourceContext());
+    jni_facade_->FlutterViewSetEGLContext(egl_context);
+  }
 }
 
 }  // namespace flutter

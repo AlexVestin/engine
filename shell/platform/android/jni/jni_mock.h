@@ -103,6 +103,8 @@ class JNIMock final : public PlatformViewAndroidJNI {
               RequestDartDeferredLibrary,
               (int loading_unit_id),
               (override));
+
+  MOCK_METHOD(void, FlutterViewSetEGLContext, (void* egl_context), (override));
 };
 
 }  // namespace flutter

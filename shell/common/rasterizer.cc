@@ -380,7 +380,12 @@ sk_sp<SkImage> Rasterizer::UploadTexture(GrBackendTexture backendTexture) {
   return SkImage::MakePromiseTexture(
       surface_->GetContext()->threadSafeProxy(),
       backendTexture.getBackendFormat(), backendTexture.dimensions(),
-      GrMipmapped::kNo, kTopLeft_GrSurfaceOrigin, kBGRA_8888_SkColorType,
+      GrMipmapped::kNo, kTopLeft_GrSurfaceOrigin,
+#if __APPLE__
+      kBGRA_8888_SkColorType,
+#else
+      kRGBA_8888_SkColorType,
+#endif
       kPremul_SkAlphaType, nullptr, get_promise_texture, free_promise_texture,
       reinterpret_cast<void*>(_backendTexture));
 }

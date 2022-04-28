@@ -16,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver.OnPreDrawListener;
+import android.opengl.EGLContext;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
@@ -96,6 +97,11 @@ import java.util.Arrays;
         public void onFlutterUiNoLongerDisplayed() {
           host.onFlutterUiNoLongerDisplayed();
           isFlutterUiDisplayed = false;
+        }
+
+        @Override
+        public void setEGLContext(EGLContext eglContext) {
+          host.setEGLContext(eglContext);
         }
       };
 
@@ -1037,5 +1043,7 @@ import java.util.Arrays;
      * SplashScreenView#remove}.
      */
     void updateSystemUiOverlays();
+
+    void setEGLContext(EGLContext eglContext);
   }
 }

@@ -28,6 +28,7 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.opengl.EGLContext;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -1112,6 +1113,11 @@ public class FlutterActivity extends Activity
   @Override
   public void onFlutterUiNoLongerDisplayed() {
     // no-op
+  }
+
+  @Override
+  public void setEGLContext(EGLContext eglContext) {
+
   }
 
   @Override

@@ -292,4 +292,8 @@ EGLContext AndroidContextGL::CreateNewContext() const {
   return success ? context : EGL_NO_CONTEXT;
 }
 
+EGLContext AndroidContextGL::GetResourceContext() const {
+  return resource_context_;
+}
+
 }  // namespace flutter

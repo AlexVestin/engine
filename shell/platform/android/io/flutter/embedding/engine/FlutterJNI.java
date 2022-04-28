@@ -10,6 +10,7 @@ import android.graphics.Bitmap;
 import android.graphics.ColorSpace;
 import android.graphics.ImageDecoder;
 import android.graphics.SurfaceTexture;
+import android.opengl.EGLContext;
 import android.os.Build;
 import android.os.Looper;
 import android.util.Size;
@@ -1121,6 +1122,13 @@ public class FlutterJNI {
   private void onPreEngineRestart() {
     for (EngineLifecycleListener listener : engineLifecycleListeners) {
       listener.onPreEngineRestart();
+    }
+  }
+
+  @SuppressWarnings("unused")
+  private void setEGLContext(EGLContext eglContext) {
+    for (FlutterUiDisplayListener listener : flutterUiDisplayListeners) {
+      listener.setEGLContext(eglContext);
     }
   }
 

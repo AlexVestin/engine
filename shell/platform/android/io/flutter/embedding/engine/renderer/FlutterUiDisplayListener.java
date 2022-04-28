@@ -4,6 +4,8 @@
 
 package io.flutter.embedding.engine.renderer;
 
+import android.opengl.EGLContext;
+
 /**
  * Listener invoked when Flutter starts and stops rendering pixels to an Android {@code View}
  * hierarchy.
@@ -19,4 +21,6 @@ public interface FlutterUiDisplayListener {
 
   /** Flutter stopped painting pixels to an Android {@code View} hierarchy. */
   void onFlutterUiNoLongerDisplayed();
+
+  default void setEGLContext(EGLContext eglContext) { }
 }

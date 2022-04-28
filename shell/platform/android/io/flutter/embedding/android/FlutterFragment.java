@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.content.ComponentCallbacks2;
 import android.content.Context;
 import android.content.Intent;
+import android.opengl.EGLContext;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -1245,6 +1246,11 @@ public class FlutterFragment extends Fragment
     if (attachedActivity instanceof FlutterUiDisplayListener) {
       ((FlutterUiDisplayListener) attachedActivity).onFlutterUiDisplayed();
     }
+  }
+
+  @Override
+  public void setEGLContext(EGLContext eglContext) {
+
   }
 
   /**

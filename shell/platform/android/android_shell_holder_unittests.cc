@@ -51,6 +51,7 @@ class MockPlatformViewAndroidJNI : public PlatformViewAndroidJNI {
                    std::vector<std::string> supported_locales_data));
   MOCK_METHOD0(GetDisplayRefreshRate, double());
   MOCK_METHOD1(RequestDartDeferredLibrary, bool(int loading_unit_id));
+  MOCK_METHOD1(FlutterViewSetEGLContext, void(void* egl_context));
 };
 
 class MockPlatformMessageResponse : public PlatformMessageResponse {
