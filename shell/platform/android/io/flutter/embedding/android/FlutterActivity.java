@@ -1116,9 +1116,7 @@ public class FlutterActivity extends Activity
   }
 
   @Override
-  public void setEGLContext(EGLContext eglContext) {
-
-  }
+  public void setEGLContext(EGLContext eglContext) {}
 
   @Override
   public boolean shouldRestoreAndSaveState() {

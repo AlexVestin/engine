@@ -22,5 +22,5 @@ public interface FlutterUiDisplayListener {
   /** Flutter stopped painting pixels to an Android {@code View} hierarchy. */
   void onFlutterUiNoLongerDisplayed();
 
-  default void setEGLContext(EGLContext eglContext) { }
+  default void setEGLContext(EGLContext eglContext) {}
 }

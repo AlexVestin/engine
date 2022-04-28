@@ -1249,9 +1249,7 @@ public class FlutterFragment extends Fragment
   }
 
   @Override
-  public void setEGLContext(EGLContext eglContext) {
-
-  }
+  public void setEGLContext(EGLContext eglContext) {}
 
   /**
    * Invoked after the {@link io.flutter.embedding.android.FlutterView} within this {@code
