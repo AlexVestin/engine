@@ -22,6 +22,11 @@ class SnapshotDelegate {
   virtual sk_sp<SkImage> ConvertToRasterImage(sk_sp<SkImage> image) = 0;
 
   virtual sk_sp<SkImage> UploadTexture(GrBackendTexture backendTexture) = 0;
+
+  virtual sk_sp<SkImage> UploadBitmap(const void* address,
+                                      int64_t width,
+                                      int64_t height,
+                                      int64_t row_bytes) = 0;
 };
 
 }  // namespace flutter

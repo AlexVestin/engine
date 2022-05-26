@@ -39,6 +39,7 @@ FOR_EACH_BINDING(DART_NATIVE_CALLBACK)
 
 void CanvasImage::RegisterNatives(tonic::DartLibraryNatives* natives) {
   natives->Register({{"Image_fromTextures", Image::FromTextures, 3, true},
+                     {"Image_fromBitmaps", Image::FromBitmaps, 4, true},
                      FOR_EACH_BINDING(DART_REGISTER_NATIVE)});
 }
 
@@ -99,6 +100,68 @@ void CanvasImage::FromTextures(Dart_NativeArguments args) {
 
     auto image = snapshot_delegate->UploadTexture(skiaBackendTexture);
 
+    auto dart_image = CanvasImage::Create();
+    dart_image->set_image({std::move(image), unref_queue});
+
+    auto raw_dart_image = tonic::ToDart(std::move(dart_image));
+    Dart_ListSetAt(_raw_dart_images, i, raw_dart_image);
+  }
+
+  Dart_SetReturnValue(args, _raw_dart_images);
+}
+
+void CanvasImage::FromBitmaps(Dart_NativeArguments args) {
+  Dart_Handle exception = nullptr;
+
+  tonic::DartList raw_addresses =
+      tonic::DartConverter<tonic::DartList>::FromArguments(args, 0, exception);
+  tonic::DartList raw_widths =
+      tonic::DartConverter<tonic::DartList>::FromArguments(args, 1, exception);
+  tonic::DartList raw_heights =
+      tonic::DartConverter<tonic::DartList>::FromArguments(args, 2, exception);
+  tonic::DartList raw_row_bytes =
+      tonic::DartConverter<tonic::DartList>::FromArguments(args, 3, exception);
+
+  if (exception && Dart_IsApiError(exception)) {
+    Dart_SetReturnValue(args, exception);
+    return;
+  }
+
+  auto* dart_state = UIDartState::Current();
+
+  if (!dart_state) {
+    Dart_SetReturnValue(
+        args, Dart_ThrowException(tonic::ToDart("Dart State is dead")));
+    return;
+  }
+
+  auto& class_library = dart_state->class_library();
+  auto type = Dart_TypeToNullableType(Dart_HandleFromPersistent(
+      class_library.GetClass(kDartWrapperInfo_ui_Image)));
+
+  auto unref_queue = dart_state->GetSkiaUnrefQueue();
+  auto snapshot_delegate = dart_state->GetSnapshotDelegate().unsafeGet();
+
+  const auto size = raw_addresses.size();
+  auto _raw_dart_images = Dart_NewListOfType(type, size);
+
+  for (size_t i = 0; i < size; i++) {
+    const auto address =
+        reinterpret_cast<const void*>(raw_addresses.Get<int64_t>(i));
+    const auto width = raw_widths.Get<int64_t>(i);
+    const auto height = raw_heights.Get<int64_t>(i);
+    const auto row_bytes = raw_row_bytes.Get<int64_t>(i);
+
+    const auto start_time = std::chrono::steady_clock::now();
+    auto image =
+        snapshot_delegate->UploadBitmap(address, width, height, row_bytes);
+    const auto end_time = std::chrono::steady_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             end_time - start_time)
+                             .count();
+    dart_state->LogMessage("flutter",
+                           std::string("Elapsed time for upload: " +
+                                       std::to_string(elapsed) + "ms"));
     auto dart_image = CanvasImage::Create();
     dart_image->set_image({std::move(image), unref_queue});
 

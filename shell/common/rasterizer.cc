@@ -390,6 +390,22 @@ sk_sp<SkImage> Rasterizer::UploadTexture(GrBackendTexture backendTexture) {
       reinterpret_cast<void*>(_backendTexture));
 }
 
+sk_sp<SkImage> Rasterizer::UploadBitmap(const void* address,
+                                        int64_t width,
+                                        int64_t height,
+                                        int64_t row_bytes) {
+  SkPixmap pixmap{SkImageInfo::Make((int)width, (int)height,
+                                    SkColorType::kBGRA_8888_SkColorType,
+                                    SkAlphaType::kUnpremul_SkAlphaType),
+                  address, (size_t)row_bytes};
+  // SkBitmap bitmap;
+  // bitmap.installPixels(pixmap);
+  // bitmap.setImmutable();
+  // return SkImage::MakeFromBitmap(bitmap);
+  return SkImage::MakeCrossContextFromPixmap(surface_->GetContext(),
+                                             std::move(pixmap), false, false);
+}
+
 sk_sp<SkImage> Rasterizer::ConvertToRasterImage(sk_sp<SkImage> image) {
   TRACE_EVENT0("flutter", __FUNCTION__);
 

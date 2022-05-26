@@ -1684,6 +1684,19 @@ class Image {
     ).map((_image) => Image._(_image!)).toList(growable: false);
   }
 
+  static List<Image> fromBitmaps(List<TextureDescriptor> textureDescriptors) {
+    final texturePointers = textureDescriptors.map((t) => t.pointer).toList(growable: false);
+    final textureWidths= textureDescriptors.map((t) => t.width).toList(growable: false);
+    final textureHeights = textureDescriptors.map((t) => t.height).toList(growable: false);
+    final textureRowBytes = textureDescriptors.map((t) => t.width * 4).toList(growable: false);
+    return _Image.fromBitmaps(
+      texturePointers,
+      textureWidths,
+      textureHeights,
+      textureRowBytes,
+    ).map((_image) => Image._(_image!)).toList(growable: false);
+  }
+
   // C++ unit tests access this.
   @pragma('vm:entry-point')
   final _Image _image;
@@ -1879,6 +1892,8 @@ class _Image extends NativeFieldWrapperClass1 {
   _Image._();
 
   static List<_Image?> fromTextures(List<int> texturePointers, List<int> widths, List<int> heights) native 'Image_fromTextures';
+
+  static List<_Image?> fromBitmaps(List<int> texturePointers, List<int> widths, List<int> heights, List<int> rowBytes) native 'Image_fromBitmaps';
 
   int get width native 'Image_width';
 
