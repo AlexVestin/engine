@@ -350,4 +350,9 @@ std::optional<RunConfiguration> AndroidShellHolder::BuildRunConfiguration(
   return config;
 }
 
+void AndroidShellHolder::PostTaskOnIOThread(const std::function<void()>& task) {
+  fml::TaskRunner::RunNowOrPostTask(shell_->GetTaskRunners().GetIOTaskRunner(),
+                                    task);
+}
+
 }  // namespace flutter

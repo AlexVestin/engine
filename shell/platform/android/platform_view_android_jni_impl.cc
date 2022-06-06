@@ -49,6 +49,8 @@ static fml::jni::ScopedJavaGlobalRef<jclass>* g_texture_wrapper_class = nullptr;
 
 static fml::jni::ScopedJavaGlobalRef<jclass>* g_java_long_class = nullptr;
 
+static fml::jni::ScopedJavaGlobalRef<jclass>* g_flutter_iotask_class = nullptr;
+
 // Called By Native
 
 static jmethodID g_flutter_callback_info_constructor = nullptr;
@@ -114,6 +116,8 @@ static jmethodID g_on_display_overlay_surface_method = nullptr;
 static jmethodID g_overlay_surface_id_method = nullptr;
 
 static jmethodID g_overlay_surface_surface_method = nullptr;
+
+static jmethodID g_iotask_run_method = nullptr;  // IOTask.run()
 
 // Mutators
 static fml::jni::ScopedJavaGlobalRef<jclass>* g_mutators_stack_class = nullptr;
@@ -486,6 +490,17 @@ static jboolean GetIsSoftwareRendering(JNIEnv* env, jobject jcaller) {
   return FlutterMain::Get().GetSettings().enable_software_rendering;
 }
 
+static void RunOnIOThread(JNIEnv* env,
+                          jobject jcaller,
+                          jlong shell_holder,
+                          jobject task) {
+  ANDROID_SHELL_HOLDER->PostTaskOnIOThread(
+      [task = fml::jni::ScopedJavaGlobalRef<jobject>(env, task)]() {
+        JNIEnv* _env = fml::jni::AttachCurrentThread();
+        _env->CallVoidMethod(task.obj(), g_iotask_run_method);
+      });
+}
+
 static void RegisterTexture(JNIEnv* env,
                             jobject jcaller,
                             jlong shell_holder,
@@ -757,6 +772,11 @@ bool RegisterApi(JNIEnv* env) {
           .name = "nativeGetIsSoftwareRenderingEnabled",
           .signature = "()Z",
           .fnPtr = reinterpret_cast<void*>(&GetIsSoftwareRendering),
+      },
+      {
+          .name = "nativeRunOnIOThread",
+          .signature = "(JLio/flutter/embedding/engine/renderer/IOTask;)V",
+          .fnPtr = reinterpret_cast<void*>(&RunOnIOThread),
       },
       {
           .name = "nativeRegisterTexture",
@@ -1072,6 +1092,20 @@ bool PlatformViewAndroid::Register(JNIEnv* env) {
                "io/flutter/embedding/engine/renderer/SurfaceTextureWrapper"));
   if (g_texture_wrapper_class->is_null()) {
     FML_LOG(ERROR) << "Could not locate SurfaceTextureWrapper class";
+    return false;
+  }
+
+  g_flutter_iotask_class = new fml::jni::ScopedJavaGlobalRef<jclass>(
+      env, env->FindClass("io/flutter/embedding/engine/renderer/IOTask"));
+  if (g_flutter_iotask_class->is_null()) {
+    FML_LOG(ERROR) << "Could not locate IOTask class";
+    return false;
+  }
+
+  g_iotask_run_method =
+      env->GetMethodID(g_flutter_iotask_class->obj(), "run", "()V");
+  if (g_iotask_run_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate IOTask#run() method";
     return false;
   }
 

@@ -8,6 +8,7 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.Lifecycle;
 import io.flutter.embedding.engine.FlutterEngine;
+import io.flutter.embedding.engine.renderer.IOTask;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.platform.PlatformViewRegistry;
 import io.flutter.view.TextureRegistry;
@@ -156,6 +157,10 @@ public interface FlutterPlugin {
     @NonNull
     public FlutterAssets getFlutterAssets() {
       return flutterAssets;
+    }
+
+    public void runOnIOThread(IOTask task) {
+      flutterEngine.runOnIOThread(task);
     }
   }
 
