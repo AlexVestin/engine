@@ -106,6 +106,8 @@ class AndroidShellHolder {
 
   void PostTaskOnIOThread(const std::function<void()>& task);
 
+  void PostTaskOnRasterThread(const std::function<void()>& task);
+
  private:
   const flutter::Settings settings_;
   const std::shared_ptr<PlatformViewAndroidJNI> jni_facade_;

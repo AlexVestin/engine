@@ -30,6 +30,28 @@ inline Dart_Handle LookupNullableType(const std::string& library_name,
   }
   return type;
 }
+
+template <>
+struct DartConverter<std::vector<fml::RefPtr<flutter::CanvasImage>>> {
+  using ValueType = fml::RefPtr<flutter::CanvasImage>;
+  static Dart_Handle ToDart(const std::vector<ValueType>& images) {
+    Dart_Handle nullable_type = LookupNullableType("dart:ui", "_Image");
+    if (Dart_IsError(nullable_type))
+      return nullable_type;
+    Dart_Handle list = Dart_NewListOfType(nullable_type, images.size());
+    if (Dart_IsError(list))
+      return list;
+    for (size_t i = 0; i < images.size(); i++) {
+      Dart_Handle dart_image = DartConverter<ValueType>::ToDart(images[i]);
+      if (Dart_IsError(dart_image))
+        return dart_image;
+      Dart_Handle result = Dart_ListSetAt(list, i, dart_image);
+      if (Dart_IsError(result))
+        return result;
+    }
+    return list;
+  }
+};
 }  // namespace tonic
 namespace flutter {
 
@@ -53,7 +75,7 @@ const tonic::DartWrapperInfo& Image::dart_wrapper_info_ =
 FOR_EACH_BINDING(DART_NATIVE_CALLBACK)
 
 void CanvasImage::RegisterNatives(tonic::DartLibraryNatives* natives) {
-  natives->Register({{"Image_FromTextures", FromTextures, 1, true},
+  natives->Register({{"Image_FromTextures", Image::FromTextures, 1, true},
                      FOR_EACH_BINDING(DART_REGISTER_NATIVE)});
 }
 
@@ -81,10 +103,6 @@ size_t CanvasImage::GetAllocationSize() const {
 void CanvasImage::FromTextures(Dart_NativeArguments args) {
   Dart_Handle texture_descriptor_list = Dart_GetNativeArgument(args, 0);
 
-  if (!Dart_IsList(texture_descriptor_list)) {
-    Dart_ThrowException(tonic::ToDart("Texture descriptors is not a list!"));
-  }
-
   auto* dart_state = UIDartState::Current();
   auto unref_queue = dart_state->GetSkiaUnrefQueue();
   auto snapshot_delegate = dart_state->GetSnapshotDelegate().unsafeGet();
@@ -92,22 +110,18 @@ void CanvasImage::FromTextures(Dart_NativeArguments args) {
   intptr_t count;
   Dart_ListLength(texture_descriptor_list, &count);
 
-  Dart_Handle type = tonic::LookupNullableType("dart:ui", "_Image");
-  Dart_Handle image_list = Dart_NewListOfType(type, count);
+  std::vector<fml::RefPtr<CanvasImage>> images;
 
   for (intptr_t i = 0; i < count; i++) {
     auto dart_texture_descriptor = Dart_ListGetAt(texture_descriptor_list, i);
-    auto raw_texture_descritptor = tonic::Int64List(dart_texture_descriptor);
-    auto texture_descriptor = TextureDescriptor::Init(raw_texture_descritptor);
+    auto raw_texture_descriptor = tonic::Int64List(dart_texture_descriptor);
+    auto texture_descriptor = TextureDescriptor::Init(raw_texture_descriptor);
     auto _image = snapshot_delegate->UploadTexture(texture_descriptor);
     auto gpu_image = SkiaGPUObject{std::move(_image), unref_queue};
     auto dart_image = CanvasImage::Create();
     dart_image->set_image(DlImageGPU::Make(std::move(gpu_image)));
-    Dart_ListSetAt(
-        image_list, i,
-        tonic::DartConverter<decltype(dart_image)>::ToDart(dart_image));
+    images.push_back(dart_image);
   }
-
-  Dart_SetReturnValue(args, image_list);
+  Dart_SetReturnValue(args, tonic::ToDart(images));
 }
 }  // namespace flutter

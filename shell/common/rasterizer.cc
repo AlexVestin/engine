@@ -402,11 +402,11 @@ sk_sp<SkImage> Rasterizer::ConvertToRasterImage(sk_sp<SkImage> image) {
 
 sk_sp<SkImage> Rasterizer::UploadTexture(
     std::shared_ptr<TextureDescriptor>& descriptor) {
-  auto _backendTexture = new GrBackendTexture(descriptor->getBackendTexture());
+  auto _backendTexture = new GrBackendTexture(descriptor->backendTexure());
   return SkImage::MakePromiseTexture(
       surface_->GetContext()->threadSafeProxy(),
       _backendTexture->getBackendFormat(), _backendTexture->dimensions(),
-      GrMipMapped::kNo, kTopLeft_GrSurfaceOrigin, descriptor->getColorType(),
+      GrMipMapped::kNo, kTopLeft_GrSurfaceOrigin, descriptor->colorType(),
       kPremul_SkAlphaType, nullptr, get_promise_texture, free_promise_texture,
       reinterpret_cast<void*>(_backendTexture));
 }
