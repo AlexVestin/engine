@@ -6,15 +6,45 @@ import zipfile
 import shutil
 import glob
 
-DART_BIN = path.join(os.getcwd(), "third_party", "dart",
-                     "tools", "sdks", "dart-sdk", "bin")
-ANDROID_HOME = path.join(os.getcwd(), "third_party", "android_tools", "sdk")
-ICU_DATA_PATH = path.join(os.getcwd(), "third_party",
-                          "icu", "flutter", "icudtl.dat")
-
 
 def make_path(*components):
   return path.join(os.getcwd(), *components)
+
+
+ENGINE_HASH = "92bf8421728f2aa0a896c88565094dd8e823d0da"
+DEPLOY_PATH = make_path("deploy", ENGINE_HASH)
+
+ICU_DATA_PATH = make_path("third_party", "icu", "flutter", "icudtl.dat")
+
+CWD = os.getcwd()
+
+HOST_DEBUG = make_path("out", "host_debug")
+HOST_PROFILE = make_path("out", "host_profile")
+HOST_RELEASE = make_path("out", "host_release")
+
+FLUTTER_MACOS_PODFILE = make_path(
+    "flutter", "shell", "platform", "darwin", "macos", "framework", "FlutterMacOS.podspec")
+
+TMP_DIR = path.join(DEPLOY_PATH, "tmp")
+
+
+def zip(out_archive, files=[], directories=[]):
+  if len(files) == 0 and len(directories) == 0:
+      raise SystemExit(
+          f"No files and no directories have been provided to be zipped for {out_archive}")
+  if path.exists(TMP_DIR) and path.isdir(TMP_DIR):
+      shutil.rmtree(TMP_DIR)
+  os.mkdir(TMP_DIR)
+  for file in files:
+      shutil.copy(file, TMP_DIR)
+  for dir in directories:
+      basename = path.basename(dir)
+      shutil.copytree(dir, path.join(TMP_DIR, basename),
+                      symlinks=True, dirs_exist_ok=True)
+  os.chdir(TMP_DIR)
+  execute_command(f'zip -9 -y -r {out_archive} .')
+  os.chdir(CWD)
+  shutil.rmtree(TMP_DIR)
 
 
 def execute_command(command):
@@ -22,7 +52,7 @@ def execute_command(command):
   exit_code = os.system(command)
   print(f"Command '{command}' executed with code {exit_code}")
   if exit_code != 0:
-    raise SystemExit(f"Command {command} exited with code {exit_code}.")
+      raise SystemExit(f"Command {command} exited with code {exit_code}.")
 
 
 def build(target):
@@ -36,8 +66,14 @@ def gn(params):
 def check_cwd():
   cwd = os.getcwd()
   if not cwd.endswith("engine/src"):
-    raise SystemExit("The script must run in the engine/src directory.")
+      raise SystemExit("The script must run in the engine/src directory.")
   print("Script is running in engine/src")
+
+
+def clean_deploy_directory():
+  if path.exists(DEPLOY_PATH) and path.isdir(DEPLOY_PATH):
+      shutil.rmtree(DEPLOY_PATH)
+  execute_command(f"mkdir -p {DEPLOY_PATH}")
 
 
 def set_use_prebuild_dart_sdk(v):
@@ -79,35 +115,34 @@ def build_host():
   build("host_profile")
   # build host_release
   build("host_release")
-  host_debug_directory = path.join(os.getcwd(), "out", "host_debug")
-  flutter_embedder_framework = path.join(
-      host_debug_directory, "FlutterEmbedder.framework")
-  shutil.make_archive(base_name=flutter_embedder_framework,
-                      format="zip", root_dir=flutter_embedder_framework)
 
-  host_debug_dills = make_path(
-      "out", "host_debug", "flutter_patched_sdk", "*.dill.S")
-  host_release_dills = make_path(
-      "out", "host_release", "flutter_patched_sdk_product", "*.dill.S")
+  flutter_embedder_framework = path.join(
+      HOST_DEBUG, "FlutterEmbedder.framework")
+  zip(path.join(DEPLOY_PATH, "FlutterEmbedder.framework.zip"),
+      directories=[flutter_embedder_framework])
+
+  host_debug_dills = path.join(HOST_DEBUG, "flutter_patched_sdk", "*.dill.S")
+  host_release_dills = path.join(
+      DEPLOY_PATH, "flutter_patched_sdk_product", "*.dill.S")
 
   for file_path_to_remove in glob.glob(host_debug_dills):
-    os.remove(file_path_to_remove)
+      os.remove(file_path_to_remove)
 
-  shutil.make_archive(make_path("out", "flutter_patched_sdk"), format="zip",
-                      root_dir=make_path("out", "host_debug"), base_dir="flutter_patched_sdk")
+  zip(make_path(DEPLOY_PATH, "flutter_patched_sdk.zip"),
+      directories=[path.join(HOST_DEBUG, "flutter_patched_sdk")])
 
-  flutter_patched_sdk_product = make_path(
-      "out", "host_release", "flutter_patched_sdk_product")
-  if path.exists(flutter_patched_sdk_product):
-    shutil.rmtree(flutter_patched_sdk_product)
-  os.rename(make_path("out", "host_release", "flutter_patched_sdk"),
-            flutter_patched_sdk_product)
+  flutter_patched_sdk_product = path.join(
+      DEPLOY_PATH, "flutter_patched_sdk_product")
+  shutil.copytree(path.join(HOST_RELEASE, "flutter_patched_sdk"),
+                  flutter_patched_sdk_product, symlinks=True)
 
   for file_path_to_remove in glob.glob(host_release_dills):
-    os.remove(file_path_to_remove)
+      os.remove(file_path_to_remove)
 
-  shutil.make_archive(make_path("out", "flutter_patched_sdk_product"), format="zip",
-                      root_dir=make_path("out", "host_release"), base_dir="flutter_patched_sdk_product")
+  zip(path.join(DEPLOY_PATH, "flutter_patched_sdk_product.zip"),
+      directories=[flutter_patched_sdk_product])
+
+  shutil.rmtree(path.join(DEPLOY_PATH, "flutter_patched_sdk_product"))
 
 
 def build_mac():
@@ -172,41 +207,42 @@ def build_mac():
       "host_release",
       "darwin-x64-release"
   )
+  return
   print("Creating darwin-x64 artifacts.zip")
   artifacts_debug_zip = path.join(
       os.getcwd(), "out", "darwin-x64", "artifacts.zip")
   host_debug_directory = path.join(os.getcwd(), "out", "host_debug")
   with zipfile.ZipFile(artifacts_debug_zip, "w") as zip_file:
-    files = [
-        (ICU_DATA_PATH, "icudtl.dat"),
-        (path.join(host_debug_directory, "flutter_tester"), "flutter_tester"),
-        (path.join(host_debug_directory, "impellerc"), "impellerc"),
-        (path.join(host_debug_directory, "gen", "flutter", "lib",
-         "snapshot", "isolate_snapshot.bin"), "isolate_snapshot.bin"),
-        (path.join(host_debug_directory, "gen", "flutter", "lib",
-         "snapshot", "vm_isolate_snapshot.bin"), "vm_isolate_snapshot.bin"),
-        (path.join(host_debug_directory, "gen",
-         "frontend_server.dart.snapshot"), "frontend_server.dart.snapshot"),
-        (path.join(host_debug_directory, "gen_snapshot"), "gen_snapshot")
-    ]
-    for (file_path, file_name) in files:
-      zip_file.write(file_path, arcname=file_name)
+      files = [
+          (ICU_DATA_PATH, "icudtl.dat"),
+          (path.join(host_debug_directory, "flutter_tester"), "flutter_tester"),
+          (path.join(host_debug_directory, "impellerc"), "impellerc"),
+          (path.join(host_debug_directory, "gen", "flutter", "lib",
+                     "snapshot", "isolate_snapshot.bin"), "isolate_snapshot.bin"),
+          (path.join(host_debug_directory, "gen", "flutter", "lib",
+                     "snapshot", "vm_isolate_snapshot.bin"), "vm_isolate_snapshot.bin"),
+          (path.join(host_debug_directory, "gen",
+                     "frontend_server.dart.snapshot"), "frontend_server.dart.snapshot"),
+          (path.join(host_debug_directory, "gen_snapshot"), "gen_snapshot")
+      ]
+      for (file_path, file_name) in files:
+          zip_file.write(file_path, arcname=file_name)
   print("Done creating darwin-x64 artifacts.zip")
 
   print("Creating darwin-x64-profile artifacts.zip")
   artifacts_profile_zip = path.join(
       os.getcwd(), "out", "darwin-x64-profile", "artifacts.zip")
   with zipfile.ZipFile(artifacts_profile_zip, "w") as zip_file:
-    zip_file.write(path.join(os.getcwd(), "out", "host_profile",
-                   "gen_snapshot"), arcname="gen_snapshot")
+      zip_file.write(path.join(os.getcwd(), "out", "host_profile",
+                               "gen_snapshot"), arcname="gen_snapshot")
   print("Done creating darwin-x64-profile artifacts.zip")
 
   print("Creating darwin-x64-release artifacts.zip")
   artifacts_release_zip = path.join(
       os.getcwd(), "out", "darwin-x64-release", "artifacts.zip")
   with zipfile.ZipFile(artifacts_release_zip, "w") as zip_file:
-    zip_file.write(path.join(os.getcwd(), "out", "host_release",
-                   "gen_snapshot"), arcname="gen_snapshot")
+      zip_file.write(path.join(os.getcwd(), "out", "host_release",
+                               "gen_snapshot"), arcname="gen_snapshot")
   print("Done creating darwin-x64-release artifacts.zip")
 
   print("Creating darwin-x64 FlutterEmbedder.framework.zip")
@@ -242,56 +278,61 @@ def build_mac():
 
 
 def package_macos_variant(label, arm64_out, x64_out, bucket_name):
-  out_directory = path.join(os.getcwd(), "out")
+  out_directory = make_path("out")
   label_directory = path.join(out_directory, label)
   arm64_directory = path.join(out_directory, arm64_out)
   x64_directory = path.join(out_directory, x64_out)
-  bucket_directory = path.join(out_directory, bucket_name)
-  create_macos_framework_command = f"""python\
-  ./flutter/sky/tools/create_macos_framework.py\
-  --dst {label_directory}\
-  --arm64-out-dir {arm64_directory}\
-  --x64-out-dir {x64_directory}"""
+  bucket_directory = path.join(DEPLOY_PATH, bucket_name)
+
+  os.mkdir(bucket_directory)
+
+  create_macos_framework_command = " ".join([
+      "python",
+      "./flutter/sky/tools/create_macos_framework.py",
+      f"--dst {label_directory}",
+      f"--arm64-out-dir {arm64_directory}",
+      f"--x64-out-dir {x64_directory}"
+  ])
+
   if label == "release":
-    create_macos_framework_command += " --dsym --strip"
+      create_macos_framework_command += " --dsym --strip"
+
   print(f"Create macOS {label} FlutterMacOS.framework")
   execute_command(create_macos_framework_command)
-  create_macos_gen_snapshot_command = f"""python\
-  ./flutter/sky/tools/create_macos_gen_snapshots.py\
-  --dst {label_directory}\
-  --arm64-out-dir {arm64_directory}\
-  --x64-out-dir {x64_directory}"""
+
+  create_macos_gen_snapshot_command = " ".join([
+      "python",
+      "./flutter/sky/tools/create_macos_gen_snapshots.py",
+      f"--dst {label_directory}",
+      f"--arm64-out-dir {arm64_directory}",
+      f"--x64-out-dir {x64_directory}"
+  ])
+
   print(f"Create macOS {label} gen_snapshot")
   execute_command(create_macos_gen_snapshot_command)
-  framework = path.join(label_directory, "FlutterMacOS.framework")
-  framework_zip = framework + ".zip"
-  framework_zip_temp = framework + "_temp.zip"
-  execute_command(f"zip -y -9  {framework_zip} {framework}")
-  flutter_podspec = path.join(
-      os.getcwd(), 'flutter/shell/platform/darwin/macos/framework/FlutterMacOS.podspec')
-  with zipfile.ZipFile(framework_zip_temp, "w") as zip_file:
-    zip_file.write(framework_zip, arcname="FlutterMacOS.framework.zip")
-    zip_file.write(flutter_podspec, arcname="FlutterMacOS.podspec")
-  os.remove(framework_zip)
-  os.rename(framework_zip_temp, framework_zip)
-  gen_snapshot_zip = path.join(label_directory, "gen_snapshot.zip")
+
+  macos_framework = make_path(bucket_directory, "FlutterMacOS.framework.zip")
+  macos_framework_temp = make_path(
+      bucket_directory, "FlutterMacOS.framework_tmp.zip")
+  zip(macos_framework,
+      directories=[path.join(label_directory, "FlutterMacOS.framework")])
+  zip(macos_framework_temp, files=[macos_framework, FLUTTER_MACOS_PODFILE])
+  os.remove(macos_framework)
+  os.rename(macos_framework_temp, macos_framework)
+
+  gen_snapshot_zip = path.join(bucket_directory, "gen_snapshot.zip")
   gen_snapshot_arm64 = path.join(label_directory, "gen_snapshot_arm64")
   gen_snapshot_x64 = path.join(label_directory, "gen_snapshot_x64")
-  with zipfile.ZipFile(gen_snapshot_zip, "w") as zip_file:
-    zip_file.write(gen_snapshot_arm64, arcname="gen_snapshot_arm64")
-    zip_file.write(gen_snapshot_x64, arcname="gen_snapshot_x64")
-  if path.isdir(bucket_directory):
-    shutil.rmtree(bucket_directory)
-  os.rename(label_directory, bucket_directory)
+  zip(gen_snapshot_zip, files=[gen_snapshot_arm64, gen_snapshot_x64])
 
 
 def get_maven_remote_name(artifact_filename):
   engine_hash = "92bf8421728f2aa0a896c88565094dd8e823d0da"
   artifact_id, artifact_extension = artifact_filename.split(".", 2)
   if artifact_id.endswith("-sources"):
-    filename_pattern = '%s-1.0.0-%s-sources.%s'
+      filename_pattern = '%s-1.0.0-%s-sources.%s'
   else:
-    filename_pattern = '%s-1.0.0-%s.%s'
+      filename_pattern = '%s-1.0.0-%s.%s'
 
   artifact_id = artifact_id.replace('-sources', '')
   filename = filename_pattern % (
@@ -303,11 +344,11 @@ def get_maven_remote_name(artifact_filename):
 
 def create_maven_artifacts(maven_artifacts):
   for artifact in maven_artifacts:
-    file_name = path.basename(artifact)
-    remote_name = get_maven_remote_name(file_name)
-    maven_directory = make_path("out", path.dirname(remote_name))
-    os.makedirs(maven_directory, exist_ok=True)
-    shutil.copy(artifact, make_path("out", remote_name))
+      file_name = path.basename(artifact)
+      remote_name = get_maven_remote_name(file_name)
+      maven_directory = make_path("out", path.dirname(remote_name))
+      os.makedirs(maven_directory, exist_ok=True)
+      shutil.copy(artifact, make_path("out", remote_name))
 
 
 def build_android_jit():
@@ -320,8 +361,8 @@ def build_android_jit():
   build("android_jit_release_x86")
   print("Creating android-x86-jit-release artifacts.zip")
   with zipfile.ZipFile(make_path("out", "android-x86-jit-release", "artifacts"), "w") as zip_file:
-    zip_file.write(make_path("out", "android_jit_release_x86",
-                   "flutter.jar"), arcname="flutter.jar")
+      zip_file.write(make_path("out", "android_jit_release_x86",
+                               "flutter.jar"), arcname="flutter.jar")
   print("Done creating android-x86-jit-release artifacts.zip")
 
 
@@ -329,34 +370,34 @@ def build_android_debug():
   variants = [
       ('arm', 'android_debug', 'android-arm', 'armeabi_v7a'),
       ('arm64', 'android_debug_arm64', 'android-arm64', 'arm64_v8a'),
-      #('x86', 'android_debug_x86', 'android-x86', 'x86'), NOT SUPPORTED
+      # ('x86', 'android_debug_x86', 'android-x86', 'x86'), NOT SUPPORTED
       ('x64', 'android_debug_x64', 'android-x64', 'x86_64'),
   ]
   for android_cpu, out_directory, artifacts_directory, abi in variants:
-    print(f"Generating {out_directory}")
-    gn([
-        "--android",
-        f"--android-cpu={android_cpu}",
-        "--no-lto"
-    ])
-    build(out_directory)
-    os.makedirs(make_path("out", artifacts_directory), exist_ok=True)
-    print(f"Creating {artifacts_directory} artifacts.zip")
-    with zipfile.ZipFile(make_path("out", artifacts_directory, "artifacts.zip"), "w") as zip_file:
-      zip_file.write(make_path("out", out_directory,
-                               "flutter.jar"), arcname="flutter.jar")
-    print(f"Done creating {artifacts_directory} artifacts.zip")
-    print(f"Creating {artifacts_directory} symbols.zip")
-    with zipfile.ZipFile(make_path("out", artifacts_directory, "symbols.zip"), "w") as zip_file:
-      zip_file.write(make_path("out", out_directory,
-                               "libflutter.so"), arcname="libflutter.so")
-    print(f"Done creating {artifacts_directory} symbols.zip")
-    print(f"Creating MAVEN artifacts for {out_directory}")
-    create_maven_artifacts([
-        make_path(f"out", out_directory, f"{abi}_debug.jar"),
-        make_path(f"out", out_directory, f"{abi}_debug.pom")
-    ])
-    print(f"Done creating MAVEN artifacts for {out_directory}")
+      print(f"Generating {out_directory}")
+      gn([
+          "--android",
+          f"--android-cpu={android_cpu}",
+          "--no-lto"
+      ])
+      build(out_directory)
+      os.makedirs(make_path("out", artifacts_directory), exist_ok=True)
+      print(f"Creating {artifacts_directory} artifacts.zip")
+      with zipfile.ZipFile(make_path("out", artifacts_directory, "artifacts.zip"), "w") as zip_file:
+          zip_file.write(make_path("out", out_directory,
+                                   "flutter.jar"), arcname="flutter.jar")
+      print(f"Done creating {artifacts_directory} artifacts.zip")
+      print(f"Creating {artifacts_directory} symbols.zip")
+      with zipfile.ZipFile(make_path("out", artifacts_directory, "symbols.zip"), "w") as zip_file:
+          zip_file.write(make_path("out", out_directory,
+                                   "libflutter.so"), arcname="libflutter.so")
+      print(f"Done creating {artifacts_directory} symbols.zip")
+      print(f"Creating MAVEN artifacts for {out_directory}")
+      create_maven_artifacts([
+          make_path(f"out", out_directory, f"{abi}_debug.jar"),
+          make_path(f"out", out_directory, f"{abi}_debug.pom")
+      ])
+      print(f"Done creating MAVEN artifacts for {out_directory}")
 
   print(f"Creating MAVEN artifacts for embedding")
   create_maven_artifacts([
@@ -393,48 +434,48 @@ def build_android_aot():
   ]
 
   for android_cpu, out_directory, artifacts_directory, clang_directory, android_triple, abi, runtime_mode in variants:
-    gn([
-        "--android",
-        "--runtime-mode",
-        runtime_mode,
-        "--android-cpu",
-        android_cpu
-    ])
-    build(out_directory)
-    os.makedirs(make_path("out", artifacts_directory), exist_ok=True)
-    print(f"Creating {artifacts_directory} artifacts.zip")
-    with zipfile.ZipFile(make_path("out", artifacts_directory, "artifacts.zip"), "w") as zip_file:
-      zip_file.write(make_path("out", out_directory,
-                               "flutter.jar"), arcname="flutter.jar")
-    print(f"Done creating {artifacts_directory} artifacts.zip")
-    print(f"Creating {artifacts_directory} symbols.zip")
-    with zipfile.ZipFile(make_path("out", artifacts_directory, "symbols.zip"), "w") as zip_file:
-      zip_file.write(make_path("out", out_directory,
-                               "libflutter.so"), arcname="libflutter.so")
-    print(f"Done creating {artifacts_directory} symbols.zip")
-    print(f"Creating MAVEN artifacts for {out_directory}")
-    create_maven_artifacts([
-        make_path(f"out", out_directory, f"{abi}_{runtime_mode}.jar"),
-        make_path(f"out", out_directory, f"{abi}_{runtime_mode}.pom")
-    ])
-    print(f"Done creating MAVEN artifacts for {out_directory}")
-    with zipfile.ZipFile(make_path("out", artifacts_directory, "linux-x64.zip"), "w") as zip_file:
-      zip_file.write(make_path("out", out_directory,
-                     clang_directory, "gen_snapshot"), arcname="gen_snapshot")
-    if out_directory == "android_profile_arm64" or out_directory == "android_release_arm64":
-      print(f"Creating MAVEN artifacts for embedding")
-      create_maven_artifacts([
-          make_path(f"out", out_directory,
-                    f"flutter_embedding_{runtime_mode}.jar"),
-          make_path(f"out", out_directory,
-                    f"flutter_embedding_{runtime_mode}.pom"),
-          make_path(f"out", out_directory,
-                    f"flutter_embedding_{runtime_mode}-sources.jar"),
+      gn([
+          "--android",
+          "--runtime-mode",
+          runtime_mode,
+          "--android-cpu",
+          android_cpu
       ])
-    execute_command(f"ninja -C out/{out_directory} flutter/lib/snapshot")
-    with zipfile.ZipFile(make_path("out", artifacts_directory, "darwin-x64.zip"), "w") as zip_file:
-      zip_file.write(make_path("out", out_directory,
-                     clang_directory, "gen_snapshot"), arcname="gen_snapshot")
+      build(out_directory)
+      os.makedirs(make_path("out", artifacts_directory), exist_ok=True)
+      print(f"Creating {artifacts_directory} artifacts.zip")
+      with zipfile.ZipFile(make_path("out", artifacts_directory, "artifacts.zip"), "w") as zip_file:
+          zip_file.write(make_path("out", out_directory,
+                                   "flutter.jar"), arcname="flutter.jar")
+      print(f"Done creating {artifacts_directory} artifacts.zip")
+      print(f"Creating {artifacts_directory} symbols.zip")
+      with zipfile.ZipFile(make_path("out", artifacts_directory, "symbols.zip"), "w") as zip_file:
+          zip_file.write(make_path("out", out_directory,
+                                   "libflutter.so"), arcname="libflutter.so")
+      print(f"Done creating {artifacts_directory} symbols.zip")
+      print(f"Creating MAVEN artifacts for {out_directory}")
+      create_maven_artifacts([
+          make_path(f"out", out_directory, f"{abi}_{runtime_mode}.jar"),
+          make_path(f"out", out_directory, f"{abi}_{runtime_mode}.pom")
+      ])
+      print(f"Done creating MAVEN artifacts for {out_directory}")
+      with zipfile.ZipFile(make_path("out", artifacts_directory, "linux-x64.zip"), "w") as zip_file:
+          zip_file.write(make_path("out", out_directory,
+                                   clang_directory, "gen_snapshot"), arcname="gen_snapshot")
+      if out_directory == "android_profile_arm64" or out_directory == "android_release_arm64":
+          print(f"Creating MAVEN artifacts for embedding")
+          create_maven_artifacts([
+              make_path(f"out", out_directory,
+                        f"flutter_embedding_{runtime_mode}.jar"),
+              make_path(f"out", out_directory,
+                        f"flutter_embedding_{runtime_mode}.pom"),
+              make_path(f"out", out_directory,
+                        f"flutter_embedding_{runtime_mode}-sources.jar"),
+          ])
+      execute_command(f"ninja -C out/{out_directory} flutter/lib/snapshot")
+      with zipfile.ZipFile(make_path("out", artifacts_directory, "darwin-x64.zip"), "w") as zip_file:
+          zip_file.write(make_path("out", out_directory,
+                                   clang_directory, "gen_snapshot"), arcname="gen_snapshot")
 
 
 def build_android():
@@ -479,10 +520,10 @@ def package_ios_variant(
   ])
 
   if strip_bitcode:
-    create_ios_framework_command += " --strip-bitcode"
+      create_ios_framework_command += " --strip-bitcode"
 
   if label == 'release':
-    create_ios_framework_command += " --dsym --strip"
+      create_ios_framework_command += " --dsym --strip"
 
   execute_command(create_ios_framework_command)
 
@@ -520,17 +561,17 @@ def package_ios_variant(
   shutil.copyfile(path.join(label_directory, file_artifacts[2]), path.join(
       label_directory, "artifacts", file_artifacts[2]))
   if path.exists(path.join(label_directory, "artifacts", "Flutter.xcframework")):
-    shutil.rmtree(path.join(label_directory,
-                  "artifacts", "Flutter.xcframework"))
+      shutil.rmtree(path.join(label_directory,
+                    "artifacts", "Flutter.xcframework"))
   shutil.copytree(path.join(label_directory, directory_artifacts[0]), path.join(
       label_directory, "artifacts", "Flutter.xcframework"))
   shutil.make_archive(path.join(out_directory, bucket_name, "artifacts"), format="zip", root_dir=path.join(
       label_directory, "artifacts"))
 
   if label == 'release':
-    dsym_zip = path.join(label_directory, 'Flutter.dSYM')
-    shutil.make_archive(path.join(out_directory, bucket_name,
-                        "Flutter.dSYM"), format="zip", root_dir=dsym_zip)
+      dsym_zip = path.join(label_directory, 'Flutter.dSYM')
+      shutil.make_archive(path.join(out_directory, bucket_name,
+                          "Flutter.dSYM"), format="zip", root_dir=dsym_zip)
 
 
 def build_ios():
@@ -641,11 +682,13 @@ def build_ios():
 
 def main():
   check_cwd()
+  clean_deploy_directory()
   set_use_prebuild_dart_sdk(True)
   build_host()
   build_mac()
-  build_android()
-  build_ios()
+  # build_android()
+  # build_ios()
+  set_use_prebuild_dart_sdk(False)
 
 
 if __name__ == "__main__":
