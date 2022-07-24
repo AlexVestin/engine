@@ -11,6 +11,7 @@
 #include "flutter/lib/ui/painting/display_list_image_gpu.h"
 #include "flutter/lib/ui/ui_dart_state.h"
 #include "third_party/skia/include/core/SkImage.h"
+#include "third_party/tonic/typed_data/typed_list.h"
 
 namespace flutter {
 
@@ -38,6 +39,8 @@ class CanvasImage final : public RefCountedDartWrappable<CanvasImage> {
   void set_image(sk_sp<DlImage> image) { image_ = image; }
 
   size_t GetAllocationSize() const override;
+
+  static void FromTextures(Dart_NativeArguments args);
 
  private:
   CanvasImage();

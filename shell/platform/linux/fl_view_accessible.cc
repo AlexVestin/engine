@@ -210,7 +210,18 @@ void fl_view_accessible_handle_update_semantics_node(
   fl_accessible_node_set_text_selection(atk_node, node->text_selection_base,
                                         node->text_selection_extent);
 
+<<<<<<< HEAD
   FlValue* children = fl_value_new_int32_list(node->children_in_traversal_order,
                                               node->child_count);
   g_hash_table_insert(self->pending_children, atk_node, children);
+=======
+  g_autoptr(GPtrArray) children = g_ptr_array_new();
+  for (size_t i = 0; i < node->child_count; i++) {
+    FlAccessibleNode* child =
+        get_node(self, node->children_in_traversal_order[i]);
+    fl_accessible_node_set_parent(child, ATK_OBJECT(atk_node), i);
+    g_ptr_array_add(children, child);
+  }
+  fl_accessible_node_set_children(atk_node, children);
+>>>>>>> remotes/origin/engine/feat/texture_video_cherrypick
 }

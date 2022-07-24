@@ -200,6 +200,12 @@ static gint fl_accessible_node_get_index_in_parent(AtkObject* accessible) {
   return priv->index;
 }
 
+// Implements AtkObject::get_index_in_parent.
+static gint fl_accessible_node_get_index_in_parent(AtkObject* accessible) {
+  FlAccessibleNode* self = FL_ACCESSIBLE_NODE(accessible);
+  return self->index;
+}
+
 // Implements AtkObject::get_n_children.
 static gint fl_accessible_node_get_n_children(AtkObject* accessible) {
   FlAccessibleNodePrivate* priv = FL_ACCESSIBLE_NODE_GET_PRIVATE(accessible);
