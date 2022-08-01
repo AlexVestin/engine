@@ -406,12 +406,10 @@ sk_sp<SkImage> Rasterizer::ConvertToRasterImage(sk_sp<SkImage> image) {
 
 sk_sp<SkImage> Rasterizer::UploadTexture(
     std::shared_ptr<TextureDescriptor>& descriptor) {
-  auto _backendTexture = new GrBackendTexture(descriptor->backendTexure());
-
   if (!surface_ || !surface_->GetContext()) {
     return nullptr;
   }
-
+  auto _backendTexture = new GrBackendTexture(descriptor->backendTexure());
   return SkImage::MakePromiseTexture(
       surface_->GetContext()->threadSafeProxy(),
       _backendTexture->getBackendFormat(), _backendTexture->dimensions(),
