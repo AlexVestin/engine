@@ -123,8 +123,11 @@ void CanvasImage::FromTextures(Dart_NativeArguments args) {
     if (_image != nullptr) {
       auto gpu_image = SkiaGPUObject{std::move(_image), unref_queue};
       dart_image->set_image(DlImageGPU::Make(std::move(gpu_image)));
+    } else {
+      Dart_ThrowException(tonic::ToDart("No graphic context available"));
+      return;
     }
-   
+
     images.push_back(dart_image);
   }
   Dart_SetReturnValue(args, tonic::ToDart(images));

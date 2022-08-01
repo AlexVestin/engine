@@ -1673,7 +1673,14 @@ class Image {
   }
 
   static List<Image?> fromTextures(List<TextureDescriptor> textureDescriptors) {
-    return _Image.fromTextures(textureDescriptors.map((e) => e._rawValues).toList(growable: false)).map((_Image?_image) => _image != null ? Image._(_image) : null).toList(growable: false);
+    try {
+      return _Image.fromTextures(textureDescriptors.map((e) => e._rawValues).toList(growable: false)).map((_Image?_image) => _image != null ? Image._(_image) : null).toList(growable: false);
+    } catch(e) {
+      if (e == 'No graphic context available') {
+        throw RendererBackgroundException();
+      }
+      rethrow;
+    }
   }
 
   bool _disposed = false;

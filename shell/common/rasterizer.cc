@@ -690,8 +690,12 @@ RasterStatus Rasterizer::DrawToSurfaceUnsafe(
   return RasterStatus::kFailed;
 }
 
-void Rasterizer::DrawLayerToSurface(flutter::LayerTree* tree,
+bool Rasterizer::DrawLayerToSurface(flutter::LayerTree* tree,
                                     OffscreenSurface* snapshot_surface) {
+  if (snapshot_surface == nullptr || surface_ == nullptr ||
+      surface_->GetContext() == nullptr) {
+    return false;
+  }
   // Draw the current layer tree into the snapshot surface.
   auto* canvas = snapshot_surface->GetCanvas();
 
@@ -719,6 +723,7 @@ void Rasterizer::DrawLayerToSurface(flutter::LayerTree* tree,
   canvas->clear(SK_ColorTRANSPARENT);
   frame->Raster(*tree, false, nullptr);
   canvas->flush();
+  return true;
 }
 
 static sk_sp<SkData> ScreenshotLayerTreeAsPicture(
