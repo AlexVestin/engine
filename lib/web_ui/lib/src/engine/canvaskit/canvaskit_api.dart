@@ -62,6 +62,7 @@ abstract class H5vcc {
 @JS()
 @anonymous
 class CanvasKit {
+  external SkRuntimeEffect get RuntimeEffect;
   external SkBlendModeEnum get BlendMode;
   external SkPaintStyleEnum get PaintStyle;
   external SkStrokeCapEnum get StrokeCap;
@@ -136,6 +137,16 @@ class CanvasKit {
   );
   external SkSurface MakeSWCanvasSurface(html.CanvasElement canvas);
 
+  external SkSurface? MakeRenderTargetNc(int width, int height);
+  external Uint8List ReadSurfacePixels(SkSurface surface, Uint8List pixels, int width, int height);
+
+
+  external SkSurface? MakeSurfaceFromTextureSource(
+    Object textureId,
+    int width,
+    int height,
+  );
+
   /// Creates an image from decoded pixels represented as a list of bytes.
   ///
   /// The pixel data must be encoded according to the image info in [info].
@@ -152,6 +163,7 @@ class CanvasKit {
     Object src,
     SkPartialImageInfo info,
   );
+  
 
   /// Gets a Skia surface from Cobalt's h5vcc object.
   ///
@@ -881,6 +893,14 @@ class SkShaderNamespace {
 @JS()
 @anonymous
 class SkShader {
+  external void delete();
+}
+
+@JS('window.flutterCanvasKit.RuntimeEffect')
+class SkRuntimeEffect {
+  external SkShader makeShader(Float32List floats, Float32List? matrix);
+  external SkShader makeShaderWithChildren(Float32List floats, List<SkShader> children, Float32List? matrix);
+  external SkRuntimeEffect Make(String sksl);
   external void delete();
 }
 

@@ -341,10 +341,66 @@ abstract class Image {
 
   bool isCloneOf(Image other) => other == this;
 
+  static Image? makeFromSource(Object obj, int width, int height) {
+    if (engine.useCanvasKit) {
+      return engine.CkMakeFromSource(obj, width, height);
+    }
+
+    throw UnimplementedError('MakeFromSource is not implemented for the web backend');
+  }
+
   List<StackTrace>? debugGetOpenHandleStackTraces() => null;
 
   @override
   String toString() => '[$width\u00D7$height]';
+}
+
+abstract class TextureDescriptor {
+  TextureDescriptor._();
+  static TextureDescriptor fromTextureId(int textureId, int width, int height, { PixelFormat pixelFormat = PixelFormat.rgba8888 }) {
+     throw UnimplementedError(); 
+  }
+
+  static TextureDescriptor fromTexturePointer(int textureId, int width, int height, { PixelFormat pixelFormat = PixelFormat.bgra8888 }) {
+     throw UnimplementedError(); 
+  }
+}
+
+class RenderSurface {
+  final Object texture;
+  engine.SkSurface? surface;
+  RenderSurface._(this.texture) : assert(engine.useCanvasKit);
+
+  static Future<RenderSurface> fromTextureId(Object textureId, int width, int height) async {
+    final RenderSurface renderSurface = RenderSurface._(textureId);
+    renderSurface.setup(width, height);
+    return renderSurface;
+  }
+
+  void toBytes(ByteBuffer buffer) {
+    engine.canvasKit.ReadSurfacePixels(surface!, buffer.asUint8List(), surface!.width(), surface!.height());
+  //   final engine.SkImage image = surface!.makeImageSnapshot();
+  //   final engine.SkImageInfo imageInfo = engine.SkImageInfo(
+  //       alphaType: engine.canvasKit.AlphaType.Premul,
+  //       colorType: engine.canvasKit.ColorType.RGBA_8888,
+  //       colorSpace: engine.SkColorSpaceSRGB,
+  //       width: image.width(),
+  //       height: image.height(),
+  //   );
+  //  return image.readPixels(0, 0, imageInfo).buffer;
+  }
+
+  Future<void> setup(int width, int height) async {
+    surface = engine.canvasKit.MakeRenderTargetNc(width, height);
+  }
+
+  Future<void> dispose() async {
+    surface?.dispose();
+  }
+
+  int rawTexture() {
+    throw UnimplementedError();
+  }
 }
 
 abstract class ColorFilter {
@@ -815,17 +871,39 @@ class ImageDescriptor {
 }
 
 class FragmentProgram {
+  final engine.CkRuntimeEffect runtimeEffect;
+
   static Future<FragmentProgram> compile({
     required ByteBuffer spirv,
     bool debugPrint = false,
-  }) {
-    throw UnsupportedError('FragmentProgram is not supported for the CanvasKit or HTML renderers.');
+  }) async {
+    throw UnimplementedError();
   }
 
-  FragmentProgram._();
+  FragmentProgram._(String sksl): runtimeEffect = engine.CkRuntimeEffect(sksl); 
+
+  static FragmentProgram setShader({
+      required String sksl
+  }) {
+    if (engine.useCanvasKit) {
+        return FragmentProgram._(sksl);
+    }
+
+    throw UnimplementedError('Fragment program is only supported for CanvasKit renderer');
+  }
 
   Shader shader({
     Float32List? floatUniforms,
     List<ImageShader>? samplerUniforms,
-  }) => throw UnsupportedError('FragmentProgram is not supported for the CanvasKit or HTML renderers.');
+  }) {
+    if(floatUniforms == null || samplerUniforms == null) {
+      throw Exception('No nulls yet');
+    }
+
+    if (engine.useCanvasKit) {
+        return runtimeEffect.makeShader(floatUniforms, samplerUniforms);
+    }
+
+    throw UnimplementedError('Fragment program is only supported for CanvasKit renderer');
+  }
 }

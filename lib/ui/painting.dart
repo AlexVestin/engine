@@ -1654,6 +1654,7 @@ class Image {
     _image._handles.add(this);
   }
 
+
   // C++ unit tests access this.
   @pragma('vm:entry-point')
   final _Image _image;
@@ -1671,6 +1672,9 @@ class Image {
     assert(!_disposed && !_image._disposed);
     return _image.height;
   }
+
+  static Image? makeFromSource(Object src, int videoWidth, int videoHeight) =>
+    throw UnimplementedError('makeFromSource is only supported on web backend with canvasKit renderer');
 
   static List<Image?> fromTextures(List<TextureDescriptor> textureDescriptors) {
     final List<Image?> images = _Image.fromTextures(textureDescriptors.map((TextureDescriptor e) => e._rawValues).toList(growable: false)).map((_Image?_image) => _image != null ? Image._(_image) : null).toList(growable: false);
@@ -1867,6 +1871,8 @@ class _Image extends NativeFieldWrapperClass1 {
   int get height native 'Image_height';
 
   static List<_Image?> fromTextures(List<Int64List> textureDescriptors) native 'Image_FromTextures';
+  static Image? makeFromSource(Object src, int videoWidth, int videoHeight) =>
+    throw UnimplementedError('makeFromSource is only supported on web backend with canvasKit renderer');
 
   Future<ByteData?> toByteData({ImageByteFormat format = ImageByteFormat.rawRgba}) {
     return _futurize((_Callback<ByteData> callback) {
@@ -3905,6 +3911,12 @@ class FragmentProgram extends NativeFieldWrapperClass1 {
     return Future<FragmentProgram>(() => FragmentProgram._(spirv: spirv, debugPrint: debugPrint));
   }
 
+  static FragmentProgram setShader({required String sksl}) {
+    throw UnimplementedError();
+  }
+
+  late final String skiaSrc;
+
   @pragma('vm:entry-point')
   FragmentProgram._({
     required ByteBuffer spirv,
@@ -3915,6 +3927,7 @@ class FragmentProgram extends NativeFieldWrapperClass1 {
       spirv,
       spv.TargetLanguage.sksl,
     );
+    skiaSrc  = result.src;
     _init(result.src, debugPrint);
     _uniformFloatCount = result.uniformFloatCount;
     _samplerCount = result.samplerCount;
@@ -5698,8 +5711,8 @@ class ImageDescriptor extends NativeFieldWrapperClass1 {
 
 
 class RenderSurface extends NativeFieldWrapperClass1 {
-  RenderSurface._(int texture) {
-    constructor(texture);
+  RenderSurface._(Object texture): assert(texture is int) {
+    constructor(texture as int);
   }
 
   static Future<RenderSurface> fromTextureId(int textureId, int width, int height) {

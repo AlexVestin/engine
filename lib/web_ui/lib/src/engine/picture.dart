@@ -97,4 +97,10 @@ class EnginePicture implements ui.Picture {
 
   final RecordingCanvas? recordingCanvas;
   final ui.Rect? cullRect;
+  
+  @override
+  Future<void> renderToSurface(int width, int height, ui.RenderSurface renderSurface) {
+    // TODO: implement renderToSurface
+    throw UnimplementedError();
+  }
 }

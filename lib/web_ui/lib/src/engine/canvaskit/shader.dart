@@ -24,6 +24,60 @@ abstract class CkShader extends ManagedSkiaObject<SkShader>
   }
 }
 
+class CkRuntimeShader extends CkShader implements ui.Shader {
+  final SkShader Function() createShader;
+  CkRuntimeShader(this.createShader);
+
+  @override
+  SkShader createDefault() {
+    return createShader();
+  }
+  
+  @override
+  SkShader resurrect() {
+    return createDefault();
+  }
+}
+
+class CkRuntimeEffect extends ManagedSkiaObject<SkRuntimeEffect> {
+  final String sksl;
+  CkRuntimeEffect(this.sksl): assert(useCanvasKit);
+  
+  CkShader makeShader(Float32List floatUniforms, List<ui.ImageShader> samplerUniforms) {
+    final List<SkShader> skiaObjects = samplerUniforms.map(
+      (ui.ImageShader e) => (e as CkImageShader).withQuality(ui.FilterQuality.none)
+    ).toList(growable: false);
+
+    final Float32List floatUniformsWithSizes = Float32List(floatUniforms.length + samplerUniforms.length * 2);
+    floatUniforms.asMap().forEach((int index, double value) {
+      floatUniformsWithSizes[index] = value;
+    });
+
+    samplerUniforms.asMap().forEach((int index, ui.ImageShader sampler) { 
+      final CkImageShader ckShader = sampler as CkImageShader;
+      floatUniformsWithSizes[floatUniforms.length + index * 2] = ckShader._image.width.toDouble();
+      floatUniformsWithSizes[floatUniforms.length + index * 2 + 1] = ckShader._image.height.toDouble();
+    });
+
+    return CkRuntimeShader(() => rawSkiaObject!.makeShaderWithChildren(floatUniformsWithSizes, skiaObjects, null));
+  }
+  
+  @override
+  SkRuntimeEffect createDefault() {
+    return canvasKit.RuntimeEffect.Make(sksl);
+  }
+  
+  @override
+  void delete() {
+    rawSkiaObject?.delete();
+  }
+  
+  @override
+  SkRuntimeEffect resurrect() {
+   return createDefault();
+  }
+}
+
 class CkGradientSweep extends CkShader implements ui.Gradient {
   CkGradientSweep(this.center, this.colors, this.colorStops, this.tileMode,
       this.startAngle, this.endAngle, this.matrix4)

@@ -273,6 +273,8 @@ class Surface {
       _cachedContextLostListener = null;
     }
 
+    print("Creating canvas =---===----------");
+
     // If `physicalSize` is not precise, use a slightly bigger canvas. This way
     // we ensure that the rendred picture covers the entire browser window.
     _pixelWidth = physicalSize.width.ceil();

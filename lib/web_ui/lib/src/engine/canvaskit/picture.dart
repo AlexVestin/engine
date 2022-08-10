@@ -91,6 +91,17 @@ class CkPicture extends ManagedSkiaObject<SkPicture> implements ui.Picture {
   }
 
   @override
+  Future<void> renderToSurface(int width, int height, ui.RenderSurface renderSurface) async {
+    if (renderSurface.surface == null) {
+      throw Exception('Render surface not initialized');
+    }
+
+    final SkCanvas canvas = renderSurface.surface!.getCanvas();
+    canvas.drawPicture(rawSkiaObject!);
+    renderSurface.surface!.flush();
+  }
+
+  @override
   Future<ui.Image> toImage(int width, int height) async {
     assert(debugCheckNotDisposed('Cannot convert picture to image.'));
     final SkSurface skSurface = canvasKit.MakeSurface(width, height);

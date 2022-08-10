@@ -26,6 +26,12 @@ class LayerScene implements ui.Scene {
     final ui.Picture picture = layerTree.flatten();
     return picture.toImage(width, height);
   }
+
+  @override
+  Future<void> renderToSurface(int width, int height, ui.RenderSurface renderSurface) async {
+    final ui.Picture picture = layerTree.flatten();
+    await picture.renderToSurface(width, height, renderSurface);
+  }
 }
 
 class LayerSceneBuilder implements ui.SceneBuilder {
