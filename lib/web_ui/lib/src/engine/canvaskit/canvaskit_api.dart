@@ -139,7 +139,7 @@ class CanvasKit {
 
   external SkSurface? MakeRenderTargetNc(int width, int height);
   external Uint8List ReadSurfacePixels(SkSurface surface, Uint8List pixels, int width, int height);
-
+  external void setCurrentContext(int glContext);
 
   external SkSurface? MakeSurfaceFromTextureSource(
     Object textureId,
@@ -162,9 +162,14 @@ class CanvasKit {
   external SkImage? MakeLazyImageFromTextureSource(
     Object src,
     SkPartialImageInfo info,
+    [bool? skipClose]
+  );
+
+   external SkImage? makeImageFromTextureSource(
+    Object src,
+    [SkPartialImageInfo? imageInformation]
   );
   
-
   /// Gets a Skia surface from Cobalt's h5vcc object.
   ///
   /// This is only applicable when running on Cobalt and when using Cobalt's

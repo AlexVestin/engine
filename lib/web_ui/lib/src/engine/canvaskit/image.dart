@@ -344,14 +344,17 @@ class CkImage implements ui.Image, StackTraceDebugger {
 
 CkImage? CkMakeFromSource(Object obj, int width, int height) {
 
-  final SkImage? skImage = canvasKit.MakeLazyImageFromTextureSource(obj, 
+  final SkImage? skImage = canvasKit.MakeLazyImageFromTextureSource(
+    obj, 
     SkPartialImageInfo(
           alphaType: canvasKit.AlphaType.Premul,
           colorType: canvasKit.ColorType.RGBA_8888,
           colorSpace: SkColorSpaceSRGB,
           width: width,
           height: height,
-  ));
+    ), 
+    true
+  );
   if (skImage == null) {
     html.window.console.warn('Failed to create image from pixels.');
     return null;

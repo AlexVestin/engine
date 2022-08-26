@@ -26,7 +26,7 @@ class SurfaceScene implements ui.Scene {
   }
   
   @override
-  Future<void> renderToSurface(int width, int height, ui.RenderSurface renderSurface) {
+  Future<void> renderToSurface(int width, int height, ui.RenderSurface renderSurface, [bool? flipVertically]) {
      throw UnsupportedError('renderToSurface is not supported on the Web');
   }
   

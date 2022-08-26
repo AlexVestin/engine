@@ -13,6 +13,38 @@ bool _offsetIsValid(Offset offset) {
   return true;
 }
 
+class CanvasImplementation {
+    final int glContext;
+    final engine.SkGrContext grContext;
+    final engine.SkSurface? surface;
+    final engine.CkCanvas canvas;
+    CanvasImplementation(this.glContext, this.grContext, this.surface, this.canvas);
+}
+
+CanvasImplementation makeCustomSurface(html.CanvasElement canvas) {
+  final engine.SkWebGLContextOptions options = engine.SkWebGLContextOptions(        
+    antialias: 0,
+    majorVersion: engine.webGLVersion,
+  );
+  final int glContext  = engine.canvasKit.GetWebGLContext(canvas, options);
+  final engine.SkGrContext _grContext = engine.canvasKit.MakeGrContext(glContext);
+  final engine.SkSurface? surface = engine.canvasKit.MakeOnScreenGLSurface(
+      _grContext,
+      canvas.width!,
+      canvas.height!,
+      engine.SkColorSpaceSRGB);
+  
+  final engine.CkCanvas skiaCanvas = engine.CkCanvas(surface!.getCanvas());
+  return CanvasImplementation(glContext, _grContext, surface, skiaCanvas);
+}
+
+void drawCustomSurface(Scene scene, CanvasImplementation implementation) {
+    engine.canvasKit.setCurrentContext(implementation.glContext);
+    final engine.LayerTree layerTree = (scene as engine.LayerScene).layerTree;
+    engine.Frame(implementation.canvas, null, engine.HtmlViewEmbedder.instance).raster(layerTree, ignoreRasterCache: true);
+    implementation.surface?.flush();
+}
+
 // ignore: unused_element, Used in Shader assert.
 bool _matrix4IsValid(Float32List matrix4) {
   assert(matrix4 != null, 'Matrix4 argument was null.'); // ignore: unnecessary_null_comparison
@@ -377,17 +409,14 @@ class RenderSurface {
     return renderSurface;
   }
 
+  ByteBuffer? toImageBytes(String type) {
+    final engine.SkImage skImage = surface!.makeImageSnapshot();
+    final Uint8List? bytes = skImage.encodeToBytes();
+    return bytes?.buffer;
+  }
+
   void toBytes(ByteBuffer buffer) {
     engine.canvasKit.ReadSurfacePixels(surface!, buffer.asUint8List(), surface!.width(), surface!.height());
-  //   final engine.SkImage image = surface!.makeImageSnapshot();
-  //   final engine.SkImageInfo imageInfo = engine.SkImageInfo(
-  //       alphaType: engine.canvasKit.AlphaType.Premul,
-  //       colorType: engine.canvasKit.ColorType.RGBA_8888,
-  //       colorSpace: engine.SkColorSpaceSRGB,
-  //       width: image.width(),
-  //       height: image.height(),
-  //   );
-  //  return image.readPixels(0, 0, imageInfo).buffer;
   }
 
   Future<void> setup(int width, int height) async {

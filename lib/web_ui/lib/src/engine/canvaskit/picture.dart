@@ -91,20 +91,33 @@ class CkPicture extends ManagedSkiaObject<SkPicture> implements ui.Picture {
   }
 
   @override
-  Future<void> renderToSurface(int width, int height, ui.RenderSurface renderSurface) async {
+  Future<void> renderToSurface(int width, int height, ui.RenderSurface renderSurface, [bool? flipVertically]) async {
     if (renderSurface.surface == null) {
       throw Exception('Render surface not initialized');
     }
 
     final SkCanvas canvas = renderSurface.surface!.getCanvas();
+    canvas.save();
+    
+    if (flipVertically == true) {
+      canvas.translate(0, height.toDouble());
+      canvas.scale(1, -1);
+    }
+   
     canvas.drawPicture(rawSkiaObject!);
+    canvas.restore();
     renderSurface.surface!.flush();
   }
 
   @override
   Future<ui.Image> toImage(int width, int height) async {
     assert(debugCheckNotDisposed('Cannot convert picture to image.'));
-    final SkSurface skSurface = canvasKit.MakeSurface(width, height);
+    SkSurface? skSurface = canvasKit.MakeRenderTargetNc(width, height);
+    if (skSurface == null) {
+      skSurface = canvasKit.MakeSurface(width, height);
+      print('Failed to create GPU backed surface, using software surface as fallback');
+    }
+
     final SkCanvas skCanvas = skSurface.getCanvas();
     skCanvas.drawPicture(skiaObject);
     final SkImage skImage = skSurface.makeImageSnapshot();

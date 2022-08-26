@@ -5715,6 +5715,8 @@ class RenderSurface extends NativeFieldWrapperClass1 {
     constructor(texture as int);
   }
 
+  void toBytes(ByteBuffer buffer) {}
+
   static Future<RenderSurface> fromTextureId(int textureId, int width, int height) {
     final RenderSurface renderSurface = RenderSurface._(textureId);
     final Completer<RenderSurface> completer = Completer<RenderSurface>.sync();

@@ -99,7 +99,7 @@ class EnginePicture implements ui.Picture {
   final ui.Rect? cullRect;
   
   @override
-  Future<void> renderToSurface(int width, int height, ui.RenderSurface renderSurface) {
+  Future<void> renderToSurface(int width, int height, ui.RenderSurface renderSurface, [bool? flipVertically]) {
     // TODO: implement renderToSurface
     throw UnimplementedError();
   }

@@ -46,7 +46,10 @@ class Scene extends NativeFieldWrapperClass1 {
     );
   }
 
-  Future<void> renderToSurface(int width, int height, RenderSurface renderSurface) {
+  Future<void> renderToSurface(int width, int height, RenderSurface renderSurface, [bool? flipVertically]) {
+    if (flipVertically == true) {
+      throw Exception('flipVertically not implemented on native for renderToSurface');
+    }
     final Completer<void> completer = Completer<void>.sync();
     _renderToSurface(width, height, renderSurface, (bool success) {
       if (!success) {

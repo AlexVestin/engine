@@ -152,7 +152,7 @@ abstract class Canvas {
 
 abstract class Picture {
   Future<Image> toImage(int width, int height);
-  Future<void> renderToSurface(int width, int height, RenderSurface renderSurface);
+  Future<void> renderToSurface(int width, int height, RenderSurface renderSurface, [bool? flipVertically]);
   void dispose();
   bool get debugDisposed;
   int get approximateBytesUsed;
